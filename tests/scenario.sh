@@ -433,7 +433,15 @@ node "$S/incident_apply.mjs" command "$F/incident.json" "$F/turn-2.json" | grep 
 node -e 'const s=require(process.argv[1]);if(s.units.some(u=>u.status!=="closed"&&u.id!=="001-command"))process.exit(1);if(s.tasks.some(t=>["pending","ready","running"].includes(t.status)))process.exit(2)' "$F/incident.json" || fail "the terminal turn left a unit or task open"
 out=$(hook_in '{"hook_event_name":"Stop"}'; node "$H/noscope-loop.mjs" < "$T/in.json"); expect_silent "$out" loop-end
 
-step "the human sets a bound mid-run, and lifting it unblocks the pass"
+step "run.json takes only fields it has, so a mistyped key is refused not invented"
+node "$S/incident_apply.mjs" run "$F/incident.json" icSession '"IC-scenario"' | grep -q "icSession" || fail "a real run.json field was refused"
+node -e 'const r=require(process.argv[1]);if(r.icSession!=="IC-scenario")process.exit(1)' "$F/run.json" || fail "icSession did not land"
+node "$S/incident_apply.mjs" run "$F/incident.json" icSesion '"typo"' >/dev/null 2>&1 && fail "a mistyped run.json key was accepted; a leader would address a commander named nowhere"
+node -e 'const r=require(process.argv[1]);if("icSesion" in r)process.exit(1)' "$F/run.json" || fail "the mistyped key was written anyway"
+node "$S/incident_apply.mjs" run "$F/incident.json" heartbeat.cronId '"cron-1"' >/dev/null || fail "a nested run.json field was refused"
+node -e 'const r=require(process.argv[1]);if(r.heartbeat.cronId!=="cron-1")process.exit(1)' "$F/run.json" || fail "the nested field did not land"
+
+step "the human sets a bound mid-runstep "the human sets a bound mid-run, and lifting it unblocks the pass"
 # Spend something, then bound the run at exactly that, so the next pass has nothing left.
 node "$S/incident_apply.mjs" call "$F/incident.json" ic claude-sonnet-5 1000 200 30 >/dev/null || fail "call not logged"
 SPENT=$(node -e 'const s=require(process.argv[1]);process.stdout.write(String(s.incident.spent.tokens??0))' "$F/incident.json")

@@ -13,7 +13,7 @@
 //   node incident_apply.mjs briefing incident.json briefing.json         the size-up's IncidentBriefing: seeds the situation, keeps its questions for the first turn
 //   node incident_apply.mjs call    incident.json <seat> <model> <in> <out> <seconds> [costUsd|""] [id] [cacheRead] [cacheWrite5m] [cacheWrite1h] [toolCalls-json]  one model call, priced at list if no cost is given
 //   node incident_apply.mjs handoff incident.json handoff.json [successor-name]  a validated HandoffDocument: command is transferred
-//   node incident_apply.mjs run     incident.json <key> <json-value>      one field of run.json (heartbeat.cronId, sessions, cutoffAt, mode, attended)
+//   node incident_apply.mjs run     incident.json <key> <json-value>      one field of run.json; the key must be one it has, and the script lists them when it is not
 //   node incident_apply.mjs review  incident.json review.json draft.json  the IC's ReviewTurn: logs the verdict; correct applies the patches to the draft
 //                                                                         and amend replaces it, writing the plan to apply over draft.json (validate it again)
 //   node incident_apply.mjs rejected incident.json <kind> <reasons.txt|-> [id]  a validator's REJECT lines on a plan, command, leader, result, briefing or review, logged
@@ -286,6 +286,11 @@ else if (mode === "handoff") {
 }
 else if (mode === "run") {
   const run = loadRun(statePath); if (!run) { console.error("no run.json beside incident.json"); process.exit(1); }
+  // Only the fields run.json has. Any key was accepted before, so `icSesion` was written, the
+  // command said it had worked, and icSession stayed unset — and a leader addresses the IC by
+  // that field, so the incident went on with nobody named where its seats look.
+  const SETTABLE = ["mode", "attended", "cutoffAt", "paused", "stoppedAt", "icSession", "sessions", "heartbeat.cronId", "heartbeat.everyMinutes", "models.ic", "models.leader", "models.planner"];
+  if (!SETTABLE.includes(a)) { console.error(`run.json has no field "${a}"; it is one of: ${SETTABLE.join(", ")}`); process.exit(2); }
   let value; try { value = JSON.parse(b); } catch { value = b; }
   const path = a.split("."); let o = run; for (const k of path.slice(0, -1)) o = (o[k] ??= {}); o[path.at(-1)] = value;
   saveRun(statePath, run);
