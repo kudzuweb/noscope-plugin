@@ -441,7 +441,7 @@ node -e 'const r=require(process.argv[1]);if("icSesion" in r)process.exit(1)' "$
 node "$S/incident_apply.mjs" run "$F/incident.json" heartbeat.cronId '"cron-1"' >/dev/null || fail "a nested run.json field was refused"
 node -e 'const r=require(process.argv[1]);if(r.heartbeat.cronId!=="cron-1")process.exit(1)' "$F/run.json" || fail "the nested field did not land"
 
-step "the human sets a bound mid-runstep "the human sets a bound mid-run, and lifting it unblocks the pass"
+step "the human sets a bound mid-run, and lifting it unblocks the pass"
 # Spend something, then bound the run at exactly that, so the next pass has nothing left.
 node "$S/incident_apply.mjs" call "$F/incident.json" ic claude-sonnet-5 1000 200 30 >/dev/null || fail "call not logged"
 SPENT=$(node -e 'const s=require(process.argv[1]);process.stdout.write(String(s.incident.spent.tokens??0))' "$F/incident.json")
