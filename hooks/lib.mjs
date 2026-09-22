@@ -54,7 +54,7 @@ export function briefAndSeatLine(text) {
   }
   const seat = {
     briefFile,
-    pluginRoot: s.match(/Plugin root:\s*(\S+)/)?.[1] ?? null,
+    pluginRoot: s.match(/Plugin root:\s*(\S+)/)?.[1]?.replace(/[.,;]+$/, "") ?? null,   // the sentence's full stop is not part of the path
     runFolder: s.match(/Run folder:\s*(\S+)/)?.[1]?.replace(/\.$/, "") ?? null,
     unitId: s.match(/Your unit:\s*(\S+)/)?.[1]?.replace(/[.,]$/, "") ?? null,
     taskId: s.match(/Your task:\s*(\S+)/)?.[1]?.replace(/[.,]$/, "") ?? null,

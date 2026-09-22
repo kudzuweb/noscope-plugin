@@ -84,6 +84,39 @@ node "$S/incident_validator.mjs" plan "$F/incident.json" "$F/draft-1.json" >/dev
 grep -q '"type":"plan.reviewed"' "$F/log.jsonl" || fail "review not logged"
 node "$S/incident_apply.mjs" plan "$F/incident.json" "$F/draft-1.json" >/dev/null || fail "plan apply"
 
+step "the seat line is built, and the guard reads back every field it puts in"
+node "$S/incident_brief.mjs" task "$F/incident.json" 001-t01 > "$T/sl-brief.json"
+LINE=$(node "$S/incident_seatline.mjs" "$F" task "$T/sl-brief.json" 001-t01) || fail "seat line not built"
+# Round-trip it through the guard's own parser: the two must agree field for field, which is the
+# whole reason the line is built rather than typed.
+node --input-type=module -e '
+const { briefAndSeatLine } = await import(process.argv[1]);
+const { brief, seat } = briefAndSeatLine(process.argv[2]);
+const bad = [];
+if (!brief) bad.push("the brief file was not found from the line");
+for (const k of ["briefFile", "pluginRoot", "runFolder", "taskId"]) if (!seat[k]) bad.push(k + " did not parse");
+if (seat.pluginRoot && /[.,;]$/.test(seat.pluginRoot)) bad.push("pluginRoot kept the sentence punctuation: " + seat.pluginRoot);
+if (bad.length) { console.error(bad.join("; ")); process.exit(1); }
+' "$H/lib.mjs" "$LINE" || fail "the guard cannot read back a seat line this plugin built: $LINE"
+# A model is never named without the alias the Agent tool needs for it. A deterministic task has
+# no model at all, and then neither field belongs on the line.
+case "$LINE" in
+  *"Model:"*"Agent tool alias:"*) ;;
+  *"Model:"*) fail "a seat line names a model with no Agent tool alias beside it: $LINE";;
+esac
+node "$S/incident_seatline.mjs" "$F" task "$T/sl-brief.json" >/dev/null 2>&1 && fail "a task seat line was built without a task id"
+node "$S/incident_seatline.mjs" "$F" task /nonexistent.json 001-t01 >/dev/null 2>&1 && fail "a seat line was built naming a brief file that does not exist"
+# The alias the leader is told to use must be one the Agent tool takes, not one invented here.
+node --input-type=module -e '
+const m = await import(process.argv[1]);
+const allowed = new Set(["fable", "opus", "sonnet", "haiku"]);
+for (const [id, alias] of Object.entries(m.MODEL_ALIAS)) {
+  if (alias !== null && !allowed.has(alias)) { console.error(`${id} maps to ${alias}, which the Agent tool does not accept`); process.exit(1); }
+  if (!m.AVAILABLE_MODELS.includes(id)) { console.error(`${id} has an alias but is not a model this plugin offers`); process.exit(1); }
+}
+for (const id of m.AVAILABLE_MODELS) if (!(id in m.MODEL_ALIAS)) { console.error(`${id} is offered but has no Agent tool alias`); process.exit(1); }
+' "$S/incident_lib.mjs" || fail "the model alias table disagrees with the models this plugin offers"
+
 step "session names are built by one script, so launching and looking up agree"
 ic=$(node "$S/incident_name.mjs" "$F" ic); ul=$(node "$S/incident_name.mjs" "$F" leader 001-u01)
 case "$ic" in IC-001-*) ;; *) fail "the IC name does not carry its role and incident: $ic";; esac

@@ -8,6 +8,11 @@
 //   node incident_name.mjs <run folder> leader <unit-id>
 //   node incident_name.mjs <run folder> task   <task-id>
 //
+// With --title it also sets the terminal's title to the name, by writing the OSC escape to
+// /dev/tty rather than to stdout, so the name can still be captured from a command substitution.
+// A session that ran /noscope-run in place was never launched with --name and would otherwise sit
+// in the tab bar under whatever it was called before it took command.
+//
 // The shape is role, incident, which one, and what it is about:
 //
 //   IC-014-scroll-after-delete          the Incident Commander of incident 014
@@ -17,7 +22,7 @@
 // The trailing words come from that seat's own objective, so a tab bar full of sessions reads
 // as the work rather than as a list of ids. They are decoration for a human: everything that
 // identifies the seat is in the part before them, and two seats can never collide on it.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -45,7 +50,9 @@ function unitNumber(unitId, incidentId) {
   return m ? m[1] : tail.replace(/[^A-Za-z0-9]/g, "");
 }
 
-const [folder, role, id] = process.argv.slice(2);
+const argv = process.argv.slice(2).filter((a) => a !== "--title");
+const setTitle = process.argv.includes("--title");
+const [folder, role, id] = argv;
 const statePath = folder ? join(folder, "incident.json") : null;
 if (!statePath || !existsSync(statePath)) { console.error("usage: incident_name.mjs <run folder> <ic|leader|task> [id]; see the header"); process.exit(2); }
 const state = JSON.parse(readFileSync(statePath, "utf8"));
@@ -74,4 +81,9 @@ if (role === "ic") {
 
 // launch-session.sh accepts letters, digits, dot, underscore and dash, and a seat with no
 // objective yet would otherwise end in a bare dash.
-console.log(name.replace(/[^A-Za-z0-9._-]/g, "").replace(/-+$/, ""));
+const final = name.replace(/[^A-Za-z0-9._-]/g, "").replace(/-+$/, "");
+if (setTitle) {
+  // To the terminal, never to stdout: the caller is usually reading the name from here.
+  try { writeFileSync("/dev/tty", `\u001b]0;${final}\u0007`); } catch {}
+}
+console.log(final);

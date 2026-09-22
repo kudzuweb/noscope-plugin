@@ -111,6 +111,20 @@ export const CONFIG_DEFAULTS = { workStarts: "09:00", handoffThreshold: 75, usag
 export const SMALLEST = "smallest";
 export const AVAILABLE_MODELS = ["claude-fable-5-1", "claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"];
 /**
+ * What the Agent tool's `model` accepts for each id. The tool takes a family alias and cannot
+ * name a generation, while the record holds full ids, so every spawn has to cross that gap. It
+ * lived as a sentence in the leader's skill, which meant a seat reading prose and typing the
+ * answer; a wrong alias is not refused anywhere and the spawn simply dies. `incident_brief.mjs`
+ * puts the alias in the brief so the leader reads it rather than works it out.
+ */
+export const MODEL_ALIAS = {
+  "claude-fable-5-1": "fable",
+  "claude-opus-5": "opus",
+  "claude-sonnet-5": "sonnet",
+  "claude-haiku-4-5": "haiku",
+};
+export const aliasOf = (model) => MODEL_ALIAS[String(model ?? "")] ?? null;
+/**
  * Where a refused call goes next: the previous generation in the same tier. A refusal from a
  * powerful model is its safety classifier declining the request, not the work being impossible,
  * and the generation before it in that tier is the one likely to answer. So the fallback never

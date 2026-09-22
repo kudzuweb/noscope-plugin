@@ -13,7 +13,7 @@
 //   node incident_brief.mjs review      incident.json <draft.json> [warnings.txt]
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { loadState, readLog, isDeterministic, rootUnit, resolveModel, runConfig, AVAILABLE_MODELS, fieldListOf, checklistText } from "./incident_lib.mjs";
+import { loadState, readLog, isDeterministic, rootUnit, resolveModel, runConfig, AVAILABLE_MODELS, fieldListOf, checklistText, aliasOf} from "./incident_lib.mjs";
 
 const [kind, statePath, id, extra] = process.argv.slice(2);
 if (!kind || !statePath) { console.error("usage: see the header of incident_brief.mjs"); process.exit(2); }
@@ -127,7 +127,7 @@ if (kind === "sizeup") {
     evidence: { claims: state.claims.filter((c) => (t.evidenceFrom?.claims ?? []).includes(c.id)).map((c) => ({ ...claimLine(c), object: c.object })), results: (t.evidenceFrom?.tasks ?? []).map((tid) => { const d = state.tasks.find((x) => x.id === tid); return { taskId: tid, resource: d?.resource, result: d?.result ?? null }; }) },
     siblings: state.tasks.filter((x) => x.unitId === t.unitId && x.id !== t.id && ["pending", "ready", "running"].includes(x.status))
       .map((x) => ({ taskId: x.id, resource: x.resource, status: x.status, scope: x.scope ?? null })),
-    task: { id: t.id, resource: t.resource, objective: t.objective, scope: t.scope, inputs: t.inputs, expectedOutput: t.expectedOutput, completionCriteria: t.completionCriteria, evidenceRequired: t.evidenceRequired, instructions: t.instructions, model: t.model, budget: t.budget, strikeTeam: t.strikeTeam },
+    task: { id: t.id, resource: t.resource, objective: t.objective, scope: t.scope, inputs: t.inputs, expectedOutput: t.expectedOutput, completionCriteria: t.completionCriteria, evidenceRequired: t.evidenceRequired, instructions: t.instructions, model: t.model, modelAlias: aliasOf(t.model), budget: t.budget, strikeTeam: t.strikeTeam },
     ask: `Work inside your own scope. The other tasks of your unit are listed under siblings with the territory each owns; where your work runs into one of theirs, say so in your findings and leave it to them rather than widening. Do this one task with the tools you have and return the ${t.resource} result object: outcome answered or insufficient (naming the kind of lack), findings, and claims each with subject, predicate, basis, confidence and the task ids it cites. Run \`node incident_validator.mjs result incident.json result.json ${t.id}\` before returning it.` };
 } else if (kind === "review") {
   const draft = JSON.parse(readFileSync(id, "utf8"));
