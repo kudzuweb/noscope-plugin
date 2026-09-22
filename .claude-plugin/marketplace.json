@@ -1,0 +1,14 @@
+{
+  "name": "noscope-plugin",
+  "description": "The noscope incident protocol as a Claude Code plugin, served from its own repository",
+  "owner": {
+    "name": "kudzuweb"
+  },
+  "plugins": [
+    {
+      "name": "noscope",
+      "source": "./",
+      "description": "The noscope incident protocol as a Claude Code plugin"
+    }
+  ]
+}

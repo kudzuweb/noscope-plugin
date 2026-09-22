@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Session handoffs live beside the project but are never published: they carry machine
+# names, paths into other repositories, run costs and session ids.
+handoff-*.md
+
+# The development history, kept as a git bundle and never tracked. The working repository holds
+# one commit on purpose: a push cannot leak a history that is not here. Restore it at any time
+# with `git clone archive/noscope-plugin-history-<date>.bundle <somewhere>`.
+archive/

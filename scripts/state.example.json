@@ -1,0 +1,46 @@
+{
+  "incident": {
+    "id": "001",
+    "objective": "Determine why the app scrolls to the bottom comment after a comment is deleted, and identify the code path responsible",
+    "constraints": ["the repository is read only"],
+    "priorities": ["settling by observation over reading"],
+    "status": "open",
+    "workingDirectory": "/path/to/repo",
+    "budget": { "tokens": 2000000, "seconds": 3600 },
+    "spent": { "tokens": 120000, "seconds": 400 }
+  },
+  "period": { "number": 1, "objectives": ["Reproduce the scroll on the running app and record which container moves"], "priorities": ["observation over reading"] },
+  "briefing": { "questions": ["Where should focus land after a deletion?"] },
+  "situation": {
+    "picture": "Deleting a comment runs a focus() call whose default scrolls the selection into view; the selection sits at the document end, so the page jumps there.",
+    "evidence": [{ "claimId": "001-c001", "stance": "for" }],
+    "open": [{ "id": "001-o01", "what": "Which container scrolls, the page or the comment rail", "settledBy": "a browser reproduction measuring both containers' scrollTop" }],
+    "assessment": { "kind": "on_track", "why": "the first reproduction agreed with the briefing's guess" },
+    "changed": "The reproduction ran; the picture now rests on one observed claim."
+  },
+  "units": [
+    { "id": "001-command", "parentId": null, "type": "ic", "objective": "the incident", "leader": { "provider": "claude-code", "model": "claude-opus-5" }, "equipment": [], "bashAllowlist": [], "status": "active" },
+    { "id": "001-u02", "parentId": "001-command", "type": "base", "objective": "Establish by observation what moves when a comment is deleted", "leader": { "provider": "claude-code", "model": "claude-sonnet-5" }, "equipment": ["playwright_browser", "Read"], "bashAllowlist": ["ls"], "status": "active", "revisePending": false }
+  ],
+  "tasks": [
+    { "id": "001-t01", "unitId": "001-command", "resource": "grep", "objective": "Every focus( call in the app source", "inputs": { "root": "packages/app/src", "pattern": "\\.focus\\(" }, "expectedOutput": "matches with file and line", "completionCriteria": ["every match listed"], "evidenceRequired": [], "dependsOn": [], "model": null, "provider": null, "status": "completed" },
+    { "id": "001-t02", "unitId": "001-u02", "resource": "reproduce", "objective": "Delete a middle comment and measure every scrollable container before and after", "inputs": { "url": "http://localhost:7373/" }, "expectedOutput": "scrollTop of each container before and after; the selection after", "completionCriteria": ["both containers measured", "two comments tried"], "evidenceRequired": ["measurements, not impressions"], "dependsOn": [], "evidenceFrom": { "claims": [], "tasks": ["001-t01"] }, "settles": ["001-o01"], "model": "claude-sonnet-5", "provider": "claude-code", "budget": { "seconds": 600 }, "status": "running" }
+  ],
+  "claims": [
+    { "id": "001-c001", "subject": "the page container", "predicate": "scrolls to the bottom after a middle comment is deleted", "object": { "before": 0, "after": 5681 }, "basis": "observed", "confidence": 0.97, "status": "asserted", "provenance": { "taskId": "001-t02", "sessionId": "abc", "cites": ["001-t01"] } }
+  ],
+  "evidence": [ { "taskId": "001-t01", "resource": "grep", "inputs": { "root": "packages/app/src", "pattern": "\\.focus\\(" }, "measure": "12 matches in 3 files" } ],
+  "reports": [],
+  "reassignments": [],
+  "questions": [],
+  "configs": [],
+  "resources": {
+    "grep": { "kind": "equipment", "paths": ["root"] },
+    "read": { "kind": "equipment", "paths": ["path"] },
+    "git_history": { "kind": "equipment", "paths": ["cwd"] },
+    "check_path": { "kind": "equipment", "paths": ["path"], "pathsMayBeMissing": true },
+    "investigate": { "kind": "personnel" },
+    "reproduce": { "kind": "personnel" },
+    "interpret": { "kind": "personnel" }
+  }
+}

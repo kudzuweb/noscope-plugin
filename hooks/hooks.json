@@ -1,0 +1,132 @@
+{
+  "description": "The noscope protocol's runtime as hooks: seats' results applied to the record, briefs and the record guarded, the IC kept cycling, a handoff forced before compaction.",
+  "hooks": {
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "timeout": 120,
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/noscope-gate.sh",
+              "noscope-seat-stop.mjs"
+            ]
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent|SendMessage",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "timeout": 30,
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/noscope-gate.sh",
+              "noscope-guard-brief.mjs"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "timeout": 10,
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/noscope-gate.sh",
+              "noscope-guard-record.mjs"
+            ]
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent|SendMessage|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "timeout": 30,
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/noscope-gate.sh",
+              "noscope-after-tool.mjs"
+            ]
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "timeout": 30,
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/noscope-gate.sh",
+              "noscope-log-turn.mjs"
+            ]
+          },
+          {
+            "type": "command",
+            "command": "bash",
+            "timeout": 10,
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/noscope-gate.sh",
+              "noscope-context-monitor.sh"
+            ]
+          },
+          {
+            "type": "command",
+            "command": "bash",
+            "timeout": 30,
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/noscope-gate.sh",
+              "noscope-loop.mjs"
+            ]
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "timeout": 10,
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/noscope-gate.sh",
+              "noscope-context-monitor.sh"
+            ]
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "timeout": 10,
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/noscope-session-start.mjs"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
