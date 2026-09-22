@@ -24,9 +24,11 @@ node S/incident_brief.mjs orientation $F/incident.json $U > $F/orient-$U.json
 node S/incident_validator.mjs brief $F/incident.json $F/orient-$U.json orientation $U
 ```
 
-Read it: your unit's objective, the period's objectives, the hierarchy around you, a
-reassignment you take, your unit's last picture if it reported before, and every task of your
-unit so far. Nothing of the IC's picture is in it, by design. Call `ListAgents` once to learn
+Read it: your unit's objective and its scope, the period's objectives, the hierarchy around
+you with the scope each other unit covers, a reassignment you take, your unit's last picture if
+it reported before, and every task of your unit so far. Work inside your unit's scope: where
+what you find runs into another unit's, say so in your report and leave it to them rather than
+widening, the same way a task treats its siblings'. Nothing of the IC's picture is in it, by design. Call `ListAgents` once to learn
 this session's name. Then tell the IC you are up: `SendMessage` to the name under `icSession`
 in `$F/run.json` with the one line `<your name> is up for unit U`. Then stop and wait; every
 later turn of yours begins with a message from the IC.

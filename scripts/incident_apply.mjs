@@ -140,12 +140,12 @@ else if (mode === "plan") {
   for (const u of p.createUnits ?? []) {
     const id = nextId(state, state.units, "u"); unitIds.set(u.ref, id);
     const cfg = u.config ? (state.configs ?? []).find((c) => c.name === u.config) : null;
-    const unit = { id, parentId: unitIds.get(u.parent) ?? u.parent, type: u.type ?? "base", config: u.config ?? null, objective: u.objective, leader: u.leader ?? cfg?.leader, equipment: u.equipment ?? cfg?.equipment ?? [], bashAllowlist: u.bashAllowlist ?? cfg?.bashAllowlist ?? [], role: u.role ?? cfg?.role ?? null, status: "active", revisePending: false, sessionId: null };
+    const unit = { id, parentId: unitIds.get(u.parent) ?? u.parent, type: u.type ?? "base", config: u.config ?? null, objective: u.objective, scope: u.scope ?? null, leader: u.leader ?? cfg?.leader, equipment: u.equipment ?? cfg?.equipment ?? [], bashAllowlist: u.bashAllowlist ?? cfg?.bashAllowlist ?? [], role: u.role ?? cfg?.role ?? null, status: "active", revisePending: false, sessionId: null };
     state.units.push(unit);
     // A configured leader model overrides the plan's; "smallest" leaves the plan's choice.
     const fixedLeader = resolveModel("leader", runConfig(statePath));
     if (fixedLeader && unit.leader && unit.leader.model !== fixedLeader) { events.push({ type: "unit.leader.routed", actor, unitId: id, from: unit.leader.model, to: fixedLeader }); unit.leader = { ...unit.leader, model: fixedLeader }; }
-    events.push({ type: "unit.created", actor, unitId: id, parentId: unit.parentId, objective: u.objective, leader: unit.leader });
+    events.push({ type: "unit.created", actor, unitId: id, parentId: unit.parentId, objective: u.objective, scope: unit.scope, leader: unit.leader });
     say(`unit ${id} under ${unit.parentId} (${unit.leader?.model ?? "?"}): ${u.objective}`);
     if (u.takes) { const r = state.reassignments.find((x) => x.id === u.takes); if (r) { r.status = "taken"; r.takenBy = id; unit.takes = u.takes; events.push({ type: "reassignment.taken", actor, reassignmentId: u.takes, unitId: id }); say(`reassignment ${u.takes} taken by ${id}`); } }
   }

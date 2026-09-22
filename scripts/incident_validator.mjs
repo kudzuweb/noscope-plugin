@@ -135,6 +135,11 @@ function checkPlan(p) {
     const name = `unit ${u.ref ?? "#" + (i + 1)}`;
     if (!u.ref) reject("Fields complete", `${name} has no ref`);
     if (!u.objective) reject("Fields complete", `${name} has no objective`);
+    // The same reason a task carries one, a level up: every other unit is shown this line, so a
+    // unit without one leaves its neighbours guessing where their own ground ends, and two units
+    // work the same territory without either noticing.
+    if (typeof u.scope !== "string" || u.scope.trim() === "")
+      reject("Fields complete", `${name} has no scope; one line naming the territory this unit covers, which the other units and the IC are shown`);
     const parentOk = (u.parent && unitById.get(u.parent)?.status === "active") || unitsInPlan.has(u.parent);
     if (!parentOk) reject("Units exist", `${name} has parent "${u.parent}", which is no active unit and no unit created in this plan`);
     if (u.config) {
