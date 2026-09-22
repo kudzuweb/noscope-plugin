@@ -387,11 +387,11 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
   - `evidenceFrom` (object, optional): Claims by id and tasks by id or ref whose content this task needs; the runtime attaches them, so do not copy evidence into inputs
     - `claims` (array of string, optional)
     - `tasks` (array of string, optional)
-- `scope` (string, required): One line naming the territory this task owns, written so a
-  sibling task can tell whose work is whose: the files, the surface or the question it covers.
-  Every other task of the same unit is shown this line and told to stay out of it, so write what
-  it covers and never what you expect it to find — a scope that leaks the picture makes a seat
-  test your hypothesis instead of the evidence.
+  - `scope` (string, required): One line naming the territory this task owns, written so a
+    sibling task can tell whose work is whose: the files, the surface or the question it covers.
+    Every other task of the same unit is shown this line and told to stay out of it, so write what
+    it covers and never what you expect it to find — a scope that leaks the picture makes a seat
+    test your hypothesis instead of the evidence.
   - `settles` (array of string, optional): The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task
   - `instructions` (string, required)
   - `provider` (string or null, required)
@@ -467,11 +467,11 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
   - `evidenceFrom` (object, optional): Claims by id and tasks by id or ref whose content this task needs; the runtime attaches them, so do not copy evidence into inputs
     - `claims` (array of string, optional)
     - `tasks` (array of string, optional)
-- `scope` (string, required): One line naming the territory this task owns, written so a
-  sibling task can tell whose work is whose: the files, the surface or the question it covers.
-  Every other task of the same unit is shown this line and told to stay out of it, so write what
-  it covers and never what you expect it to find — a scope that leaks the picture makes a seat
-  test your hypothesis instead of the evidence.
+  - `scope` (string, required): One line naming the territory this task owns, written so a
+    sibling task can tell whose work is whose: the files, the surface or the question it covers.
+    Every other task of the same unit is shown this line and told to stay out of it, so write what
+    it covers and never what you expect it to find — a scope that leaks the picture makes a seat
+    test your hypothesis instead of the evidence.
   - `settles` (array of string, optional): The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task
   - `instructions` (string, required)
   - `provider` (string or null, required)
