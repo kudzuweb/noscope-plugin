@@ -24,7 +24,7 @@ function resultBodyOf(d) {
   if (p) { try { return JSON.parse(readFileSync(p, "utf8")); } catch {} }
   return d.result;
 }
-import { loadState, readLog, isDeterministic, rootUnit, resolveModel, runConfig, AVAILABLE_MODELS, fieldListOf, checklistText, aliasOf} from "./incident_lib.mjs";
+import { loadState, readLog, isDeterministic, rootUnit, resolveModel, runConfig, AVAILABLE_MODELS, shapeOf, checklistText, aliasOf} from "./incident_lib.mjs";
 
 const [kind, statePath, id, extra] = process.argv.slice(2);
 if (!kind || !statePath) { console.error("usage: see the header of incident_brief.mjs"); process.exit(2); }
@@ -73,7 +73,7 @@ function restingOn(situation, claims, tasks, unitId = null) {
 }
 
 if (kind === "sizeup") {
-  out = { objective: state.incident.objective, constraints: state.incident.constraints, priorities: state.incident.priorities, workingDirectory: state.incident.workingDirectory, availableModels: AVAILABLE_MODELS, returns: fieldListOf("IncidentBriefing"), ask: "Size the incident up with the tools you have, in at most a dozen looks (a check is one look at whether a thing exists, answers, or is where the objective says it is; what the incident turns on is for the units to establish, not for you to read your way to), and return an IncidentBriefing: the kind read from the objective's verb, the dominant problem, what you checked, initial objectives, units sketched, hazards, any question only the human could answer, as proposals to the Incident Commander, and the model right-sized for this incident for each seat above a task (incomingCommander for the IC, seatModels.planner and seatModels.leader), chosen from availableModels with a why each." };
+  out = { objective: state.incident.objective, constraints: state.incident.constraints, priorities: state.incident.priorities, workingDirectory: state.incident.workingDirectory, availableModels: AVAILABLE_MODELS, returns: shapeOf("IncidentBriefing"), ask: "Size the incident up with the tools you have, in at most a dozen looks (a check is one look at whether a thing exists, answers, or is where the objective says it is; what the incident turns on is for the units to establish, not for you to read your way to), and return an IncidentBriefing: the kind read from the objective's verb, the dominant problem, what you checked, initial objectives, units sketched, hazards, any question only the human could answer, as proposals to the Incident Commander, and the model right-sized for this incident for each seat above a task (incomingCommander for the IC, seatModels.planner and seatModels.leader), chosen from availableModels with a why each." };
 } else if (kind === "ic") {
   const lastTurn = [...log].reverse().find((e) => e.type === "command.turned");
   const since = lastTurn ? lastTurn.sequence : -1;
@@ -137,7 +137,7 @@ if (kind === "sizeup") {
     questions: (state.questions ?? []).filter((q) => !q.answer),
     resources: state.resources,
   };
-  out = { incident: plannerBase, checklist, rules: checklistText(), sinceLastPlan, returns: fieldListOf("ActionPlan"), models: { leader: resolveModel("leader", cfg) ?? "claude-sonnet-5", provider: "claude-code" }, seatModel: resolveModel("planner", cfg) ?? "claude-opus-5", ask: "Draft this operational period's tactics as an ActionPlan, a suggestion for the Incident Commander: units to open or close each with the territory it covers, tasks with resource, inputs, expected output, completion criteria, dependencies and the evidence each reads, the smallest model that fits each (Opus only with a modelWhy), what each task settles among situation.open, and any reassignment taken. Independent work runs in the same period. A unit's scope and a task's are decisions, not labels: every other unit is shown a unit's and every sibling task is shown a task's, so two that overlap do the same work twice and neither reports the gap between them." };
+  out = { incident: plannerBase, checklist, rules: checklistText(), sinceLastPlan, returns: shapeOf("ActionPlan"), models: { leader: resolveModel("leader", cfg) ?? "claude-sonnet-5", provider: "claude-code" }, seatModel: resolveModel("planner", cfg) ?? "claude-opus-5", ask: "Draft this operational period's tactics as an ActionPlan, a suggestion for the Incident Commander: units to open or close each with the territory it covers, tasks with resource, inputs, expected output, completion criteria, dependencies and the evidence each reads, the smallest model that fits each (Opus only with a modelWhy), what each task settles among situation.open, and any reassignment taken. Independent work runs in the same period. A unit's scope and a task's are decisions, not labels: every other unit is shown a unit's and every sibling task is shown a task's, so two that overlap do the same work twice and neither reports the gap between them." };
 } else if (kind === "orientation") {
   const u = state.units.find((x) => x.id === id); if (!u) { console.error(`no unit ${id}`); process.exit(1); }
   const siblings = state.units.filter((x) => x.parentId === u.parentId && x.id !== u.id && x.status === "active").map((x) => ({ id: x.id, objective: x.objective, scope: x.scope ?? null }));
@@ -153,13 +153,13 @@ if (kind === "sizeup") {
   const u = state.units.find((x) => x.id === id); if (!u) { console.error(`no unit ${id}`); process.exit(1); }
   const mine = state.tasks.filter((t) => t.unitId === u.id);
   const restingUnit = restingOn(u.lastPicture, state.claims, state.tasks, u.id);
-  out = { returns: fieldListOf("LeaderTurn"), ...(restingUnit.length ? { restingOn: restingUnit } : {}), unheard: mine.filter((t) => t.heard === false).map(ending), refused: (u.refusedAssignments ?? []), ready: mine.filter((t) => t.status === "ready").map((t) => t.id), running: mine.filter((t) => t.status === "running").map((t) => t.id) };
+  out = { returns: shapeOf("LeaderTurn"), ...(restingUnit.length ? { restingOn: restingUnit } : {}), unheard: mine.filter((t) => t.heard === false).map(ending), refused: (u.refusedAssignments ?? []), ready: mine.filter((t) => t.status === "ready").map((t) => t.id), running: mine.filter((t) => t.status === "running").map((t) => t.id) };
   if (u.revisePending) { const r = state.reports.find((x) => x.id === u.reviseReportId); out.revise = { instructions: u.reviseInstructions, why: u.reviseWhy, report: r ? { id: r.id, outcome: r.outcome, changes: r.changes, situation: r.situation } : null, periodObjectives: state.period?.objectives ?? [] }; }
   out.ask = out.ready.length === 0 && out.running.length === 0 ? "No ready task remains in your unit. Assign tasks for what is missing and continue, or file your report against the unit's objective, as a LeaderTurn." : "Decide: assign tasks under your unit, flag consult on any you want to judge when it ends, or report, as a LeaderTurn.";
 } else if (kind === "task") {
   const t = state.tasks.find((x) => x.id === id); if (!t) { console.error(`no task ${id}`); process.exit(1); }
   const u = state.units.find((x) => x.id === t.unitId);
-  out = { returns: (fieldListOf(t.resource) ?? fieldListOf("investigate")) + `\n- \`taskId\` (string, required by the plugin): "${t.id}", so the record knows which task the result ends`, objective: state.incident.objective, unit: { id: u?.id, objective: u?.objective },
+  out = { returns: (shapeOf(t.resource) ?? shapeOf("investigate")) + `\n- \`taskId\` (string, required by the plugin): "${t.id}", so the record knows which task the result ends`, objective: state.incident.objective, unit: { id: u?.id, objective: u?.objective },
     evidence: { claims: state.claims.filter((c) => (t.evidenceFrom?.claims ?? []).includes(c.id)).map((c) => ({ ...claimLine(c), object: c.object })), results: (t.evidenceFrom?.tasks ?? []).map((tid) => { const d = state.tasks.find((x) => x.id === tid); return { taskId: tid, resource: d?.resource, result: resultBodyOf(d) }; }) },
     siblings: state.tasks.filter((x) => x.unitId === t.unitId && x.id !== t.id && ["pending", "ready", "running"].includes(x.status))
       .map((x) => ({ taskId: x.id, resource: x.resource, status: x.status, scope: x.scope ?? null })),

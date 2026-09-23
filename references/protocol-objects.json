@@ -1,0 +1,644 @@
+{
+  "_README": [
+    "The object each seat returns, in the shape it returns it in: every value is the instruction",
+    "for that field. A seat is handed its own entry instead of a markdown field list, so it fills",
+    "a shape rather than building one from prose.",
+    "",
+    "Generated from references/noscope-protocol.md by scripts/build_shapes.mjs. The protocol is the",
+    "source and this is derived: edit the protocol, then rebuild. tests/scenario.sh runs --check and",
+    "fails when this file and the protocol have drifted apart."
+  ],
+  "shapes": {
+    "IncidentBriefing": {
+      "kind": "<string, required — What sort of incident this is, in a few words, read from the objective's verb: determine, identify, explain or find, or a question (where, what, why), is a diagnosis (a bug hunt, a question about a codebase); build, change, fix or add is a build (a feature, a migration)>",
+      "dominantProblem": "<string, required — The one problem the incident turns on, one paragraph>",
+      "obviouslyNeeded": [
+        {
+          "what": "<string, required>",
+          "checked": "<boolean, required — Whether a tool checked it during the size-up>",
+          "finding": "<string, optional — With checked: which tool checked it and what it showed>"
+        }
+      ],
+      "initialObjectives": [
+        "<array of string, required — Objectives for the first operational period, as you see them, scoped to the objective's verb: a diagnosis (determine, identify, explain, find, or a question: where, what, why) takes no fix objective, since the answer is the cause; a build (build, change, fix, add) takes one>"
+      ],
+      "initialOrganization": [
+        "<array of string, required — Units sketched, one line each: what the unit is for and what model its leader should be on; no fix unit on a diagnosis>"
+      ],
+      "questionsForHuman": [
+        "<array of string, required — Questions for the human you propose to the Incident Commander, who accepts each (it is asked, and the incident waits on their answer), discards it with a why, or answers it from the objective: only what only they know or may decide, that no tool could find and the objective does not already settle; on a diagnosis, no question about what the intended behavior should be>"
+      ],
+      "hazards": [
+        "<array of string, required — What could go wrong or mislead: a stale document, a writing command, an ambiguous objective>"
+      ],
+      "incomingCommander": {
+        "provider": "<string, required>",
+        "model": "<string, required — A model the provider serves>",
+        "why": "<string, required — Why this model for this incident: what the judgment it needs is>"
+      },
+      "seatModels": {
+        "planner": "<object, optional>",
+        "leader": "<object, optional>"
+      }
+    },
+    "CommandTurn": {
+      "briefingEvaluation": [
+        {
+          "item": "<string, required — The briefing item, as the briefing states it>",
+          "verdict": "<one of `accepted`, `rewritten`, `discarded`, required>",
+          "why": "<string, required>"
+        }
+      ],
+      "briefingQuestions": [
+        {
+          "proposal": "<integer, required — The question's number in the briefing, as the transfer of command lists it>",
+          "verdict": "<one of `accept`, `discard`, `answer`, required>",
+          "why": "<string, required — For accept: why only the human can answer it; for discard: why the incident does not need it; for answer: where the answer comes from (the objective, a constraint, the file)>",
+          "answer": "<string, optional — With verdict answer: the answer, recorded as the IC's>"
+        }
+      ],
+      "periodObjectives": [
+        "<array of string, required — The objectives for this operational period, from the incident objective, the constraints, the priorities and the units' reports>"
+      ],
+      "priorities": [
+        "<array of string, required — The incident's priorities, restated or revised for this period>"
+      ],
+      "reportVerdicts": [
+        {
+          "reportId": "<string, required — The report's event id, as the change report heads it>",
+          "unitId": "<string, required — The unit that reported>",
+          "verdict": "<one of `accepted`, `revise`, `reassign`, required>",
+          "instructions": "<string, required — For revise: what is missing, for the same leader to finish; for reassign: what the unit found and did not find, for the unit that takes its slice; empty for accepted. Never what you think the answer is: a unit reads its objective and the evidence, not your picture>",
+          "why": "<string, required — Why this verdict, from the work shown; it reaches the unit's leader with the instructions, so it says what the work showed and never what you think the answer is>"
+        }
+      ],
+      "situation": {
+        "picture": "<string, required — What the incident now believes is going on, one paragraph: edit the picture you were given, do not restate it>",
+        "evidence": [
+          {
+            "claimId": "<string, required>",
+            "stance": "<one of `for`, `against`, required — Whether the claim supports the picture or contradicts it>"
+          }
+        ],
+        "open": [
+          {
+            "id": "<string, optional — Only for an item carried forward from your last picture: its id as the file lists it. Leave it out for a new item; the runtime numbers it. Never write an id the file does not list>",
+            "what": "<string, required — What is not yet known, one line>",
+            "settledBy": "<string, required — What would settle it, in prose: what must be read, run or reproduced; the plan's task that works it names this item's id in settles>",
+            "deferred": "<string, optional — Why this item is not worked this period: a decision recorded, not an omission; an item neither worked by a task nor deferred rejects the plan>"
+          }
+        ],
+        "assessment": {
+          "kind": "<one of `on_track`, `priors_updated`, `tactics_change`, required>",
+          "why": "<string, required — Why, one sentence>"
+        },
+        "changed": "<string, required — What this turn changed in the picture, one paragraph; on the first turn, what you made of the briefing's seed>"
+      },
+      "closeUnits": [
+        {
+          "unitId": "<string, required>",
+          "reason": "<string, required>"
+        }
+      ],
+      "dropReassignments": [
+        {
+          "id": "<string, required — An open reassignment's id, as the incident file lists it under your situation>",
+          "why": "<string, required>"
+        }
+      ],
+      "answers": [
+        {
+          "unitId": "<string, required — The unit that raised the request>",
+          "request": "<string, required — The request, as the unit stated it>",
+          "answer": "<string, required>"
+        }
+      ],
+      "assignTasks": [
+        {
+          "ref": "<string, optional — A label another task in this plan can name in dependsOn, so a chain of tasks runs in one cycle>",
+          "unit": "<string, required — An existing unit id, or the ref of a unit created in this plan>",
+          "resource": "<string, required>",
+          "objective": "<string, required>",
+          "inputs": "<object, required>",
+          "expectedOutput": "<string, required>",
+          "completionCriteria": [
+            "<array of string, required>"
+          ],
+          "evidenceRequired": [
+            "<array of string, required>"
+          ],
+          "dependsOn": [
+            "<array of string, required — Task ids, or refs of tasks created in this plan>"
+          ],
+          "evidenceFrom": {
+            "claims": [
+              "<array of string, optional>"
+            ],
+            "tasks": [
+              "<array of string, optional>"
+            ]
+          },
+          "scope": "<string, required — One line naming the territory this task owns, written so a sibling task can tell whose work is whose: the files, the surface or the question it covers. Every other task of the same unit is shown this line and told to stay out of it, so write what it covers and never what you expect it to find — a scope that leaks the picture makes a seat test your hypothesis instead of the evidence.>",
+          "settles": [
+            "<array of string, optional — The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task>"
+          ],
+          "instructions": "<string, required>",
+          "provider": "<string or null, required>",
+          "model": "<string or null, required>",
+          "modelWhy": "<string, optional — Why this task's model is larger than its kind of work needs: required in substance when the model is an Opus or Fable one, since recording, reproducing and reading are Haiku or Sonnet work and only weighing evidence to a conclusion may take Opus; omit it on a smaller model>",
+          "budget": {
+            "tokens": "<integer, optional>",
+            "seconds": "<number, optional>"
+          },
+          "strikeTeam": [
+            {
+              "kind": "<string, required — The kind's name, as the session names it when it sends a member: letters, digits, - and _>",
+              "model": "<string, required — A model the task's provider serves>",
+              "tools": [
+                "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes>"
+              ],
+              "prompt": "<string, required — The member's system prompt>",
+              "count": "<integer, required — How many members the leader intends to send>",
+              "why": "<string, required — Why this team, this shape and this count>"
+            }
+          ]
+        }
+      ],
+      "questionsForHuman": [
+        "<array of string, required>"
+      ],
+      "resourceGaps": [
+        {
+          "need": "<string, required>",
+          "why": "<string, required>"
+        }
+      ],
+      "grantRequests": [
+        {
+          "resource": "<string, required>",
+          "effect": "<one of `read_only`, `writes_local`, `writes_external`, required>",
+          "reason": "<string, required>"
+        }
+      ],
+      "incidentStatus": "<one of `continue`, `blocked`, `satisfied`, `failed`, required>",
+      "rationale": "<string, required — Why these objectives and this status, one paragraph>",
+      "discrepancy": "<string, optional — Only when the update received describes a different problem from the one being worked, not a different detail: what differs>"
+    },
+    "Situation": {
+      "picture": "<string, required — What the incident now believes is going on, one paragraph: edit the picture you were given, do not restate it>",
+      "evidence": [
+        {
+          "claimId": "<string, required>",
+          "stance": "<one of `for`, `against`, required — Whether the claim supports the picture or contradicts it>"
+        }
+      ],
+      "open": [
+        {
+          "id": "<string, optional — Only for an item carried forward from your last picture: its id as the file lists it. Leave it out for a new item; the runtime numbers it. Never write an id the file does not list>",
+          "what": "<string, required — What is not yet known, one line>",
+          "settledBy": "<string, required — What would settle it, in prose: what must be read, run or reproduced; the plan's task that works it names this item's id in settles>",
+          "deferred": "<string, optional — Why this item is not worked this period: a decision recorded, not an omission; an item neither worked by a task nor deferred rejects the plan>"
+        }
+      ],
+      "assessment": {
+        "kind": "<one of `on_track`, `priors_updated`, `tactics_change`, required>",
+        "why": "<string, required — Why, one sentence>"
+      },
+      "changed": "<string, required — What this turn changed in the picture, one paragraph; on the first turn, what you made of the briefing's seed>"
+    },
+    "ActionPlan": {
+      "createUnits": [
+        {
+          "objective": "<string, required — What the unit is to establish; its leader reports against it, and the IC judges the report>",
+          "scope": "<string, required — One line naming the territory this unit covers, written so another unit can tell whose ground is whose: the area, the surface or the question it owns. Every other unit is shown this line, and so is the IC, so write what it covers and never what you expect it to find. Decide it deliberately when you place the unit: two units whose scopes overlap do the same work twice and neither reports the gap between them>",
+          "leader": {
+            "provider": "<string, required>",
+            "model": "<string, required>"
+          },
+          "equipment": [
+            "<array of string, optional — Built-in tool names and external equipment names the unit's tasks may use; a session task under the unit needs no more than this, and every session task runs in a session of its own>"
+          ],
+          "bashAllowlist": [
+            "<array of string, optional — Commands the unit's tasks' read-only Bash may run>"
+          ],
+          "role": "<string, optional — The role text the leader's session reads in place of the type's own; omit it for the type's>",
+          "config": "<string, optional — The name of a saved unit config (section 8 lists them) whose leader, equipment, bashAllowlist and role fill this unit's form; give only objective and parent beside it, or a field to override the config's>",
+          "ref": "<string, required — A label the plan uses to refer to this new unit elsewhere>",
+          "parent": "<string, required — An existing unit id, or the ref of a unit created in this plan>",
+          "type": "<string, optional — The unit's type, whose form these fields fill and whose protocol runs it: base, the led unit, is the only type a plan may create>",
+          "takes": "<string, optional — The id of an open reassignment this unit takes: the slice of a unit the IC closed with a reassign verdict, whose instructions and claims the new unit's leader is oriented with; every open reassignment is taken by exactly one new unit>",
+          "modelWhy": "<string, optional — Why the leader's model is larger than its work needs: required in substance when the leader is on an Opus or Fable model, since directing narrow tasks is Haiku or Sonnet work; omit it on a smaller model>"
+        }
+      ],
+      "closeUnits": [
+        {
+          "unitId": "<string, required>",
+          "reason": "<string, required>"
+        }
+      ],
+      "createTasks": [
+        {
+          "ref": "<string, optional — A label another task in this plan can name in dependsOn, so a chain of tasks runs in one cycle>",
+          "unit": "<string, required — An existing unit id, or the ref of a unit created in this plan>",
+          "resource": "<string, required>",
+          "objective": "<string, required>",
+          "inputs": "<object, required>",
+          "expectedOutput": "<string, required>",
+          "completionCriteria": [
+            "<array of string, required>"
+          ],
+          "evidenceRequired": [
+            "<array of string, required>"
+          ],
+          "dependsOn": [
+            "<array of string, required — Task ids, or refs of tasks created in this plan>"
+          ],
+          "evidenceFrom": {
+            "claims": [
+              "<array of string, optional>"
+            ],
+            "tasks": [
+              "<array of string, optional>"
+            ]
+          },
+          "scope": "<string, required — One line naming the territory this task owns, written so a sibling task can tell whose work is whose: the files, the surface or the question it covers. Every other task of the same unit is shown this line and told to stay out of it, so write what it covers and never what you expect it to find — a scope that leaks the picture makes a seat test your hypothesis instead of the evidence.>",
+          "settles": [
+            "<array of string, optional — The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task>"
+          ],
+          "instructions": "<string, required>",
+          "provider": "<string or null, required>",
+          "model": "<string or null, required>",
+          "modelWhy": "<string, optional — Why this task's model is larger than its kind of work needs: required in substance when the model is an Opus or Fable one, since recording, reproducing and reading are Haiku or Sonnet work and only weighing evidence to a conclusion may take Opus; omit it on a smaller model>",
+          "budget": {
+            "tokens": "<integer, optional>",
+            "seconds": "<number, optional>"
+          },
+          "strikeTeam": [
+            {
+              "kind": "<string, required — The kind's name, as the session names it when it sends a member: letters, digits, - and _>",
+              "model": "<string, required — A model the task's provider serves>",
+              "tools": [
+                "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes>"
+              ],
+              "prompt": "<string, required — The member's system prompt>",
+              "count": "<integer, required — How many members the leader intends to send>",
+              "why": "<string, required — Why this team, this shape and this count>"
+            }
+          ]
+        }
+      ],
+      "cancelTasks": [
+        "<array of string, required>"
+      ],
+      "questionsForHuman": [
+        "<array of string, required>"
+      ],
+      "grantRequests": [
+        {
+          "resource": "<string, required>",
+          "effect": "<one of `read_only`, `writes_local`, `writes_external`, required>",
+          "reason": "<string, required>"
+        }
+      ],
+      "resourceGaps": [
+        {
+          "need": "<string, required>",
+          "why": "<string, required>"
+        }
+      ],
+      "applySops": [
+        {
+          "sop": "<string, required>",
+          "parent": "<string, required>",
+          "angles": [
+            "<array of string, required>"
+          ]
+        }
+      ],
+      "incidentStatus": "<one of `continue`, `blocked`, `satisfied`, `failed`, required>",
+      "rationale": "<string, required — Why this plan, one paragraph: how it works the open items of the IC's situation, and the priority that chose between plans>",
+      "discrepancy": "<string, optional — Only when the update received describes a different problem from the one being worked, not a different detail: what differs>"
+    },
+    "ReviewTurn": {
+      "verdict": "<one of `approve`, `correct`, `amend`, required>",
+      "patches": [
+        {
+          "kind": "<one of `set`, `add`, `cancel`, required — set replaces one field of a draft task; add appends a task to createTasks; cancel removes a draft task, or adds an open task's id to cancelTasks>",
+          "task": "<string, optional — With set or cancel: the draft task's ref, or #N for the Nth task of createTasks as the draft lists them; with cancel, an open task's id instead>",
+          "field": "<one of `ref`, `unit`, `resource`, `objective`, `inputs`, `expectedOutput`, `completionCriteria`, `evidenceRequired`, `dependsOn`, `evidenceFrom`, `instructions`, `scope`, `provider`, `model`, `budget`, `strikeTeam`, optional — With set: the task's field to replace>",
+          "value": "<value, optional — With set: the field's new value, whole, in the field's own shape (dependsOn is a list of refs or ids, model a string, budget an object)>",
+          "proposal": {
+            "ref": "<string, optional — A label another task in this plan can name in dependsOn, so a chain of tasks runs in one cycle>",
+            "unit": "<string, required — An existing unit id, or the ref of a unit created in this plan>",
+            "resource": "<string, required>",
+            "objective": "<string, required>",
+            "inputs": "<object, required>",
+            "expectedOutput": "<string, required>",
+            "completionCriteria": [
+              "<array of string, required>"
+            ],
+            "evidenceRequired": [
+              "<array of string, required>"
+            ],
+            "dependsOn": [
+              "<array of string, required — Task ids, or refs of tasks created in this plan>"
+            ],
+            "evidenceFrom": {
+              "claims": [
+                "<array of string, optional>"
+              ],
+              "tasks": [
+                "<array of string, optional>"
+              ]
+            },
+            "scope": "<string, required — One line naming the territory this task owns, written so a sibling task can tell whose work is whose: the files, the surface or the question it covers. Every other task of the same unit is shown this line and told to stay out of it, so write what it covers and never what you expect it to find — a scope that leaks the picture makes a seat test your hypothesis instead of the evidence.>",
+            "settles": [
+              "<array of string, optional — The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task>"
+            ],
+            "instructions": "<string, required>",
+            "provider": "<string or null, required>",
+            "model": "<string or null, required>",
+            "modelWhy": "<string, optional — Why this task's model is larger than its kind of work needs: required in substance when the model is an Opus or Fable one, since recording, reproducing and reading are Haiku or Sonnet work and only weighing evidence to a conclusion may take Opus; omit it on a smaller model>",
+            "budget": {
+              "tokens": "<integer, optional>",
+              "seconds": "<number, optional>"
+            },
+            "strikeTeam": [
+              {
+                "kind": "<string, required — The kind's name, as the session names it when it sends a member: letters, digits, - and _>",
+                "model": "<string, required — A model the task's provider serves>",
+                "tools": [
+                  "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes>"
+                ],
+                "prompt": "<string, required — The member's system prompt>",
+                "count": "<integer, required — How many members the leader intends to send>",
+                "why": "<string, required — Why this team, this shape and this count>"
+              }
+            ]
+          },
+          "why": "<string, required — Why this edit, one sentence>"
+        }
+      ],
+      "plan": {
+        "createUnits": [
+          {
+            "objective": "<string, required — What the unit is to establish; its leader reports against it, and the IC judges the report>",
+            "scope": "<string, required — One line naming the territory this unit covers, written so another unit can tell whose ground is whose: the area, the surface or the question it owns. Every other unit is shown this line, and so is the IC, so write what it covers and never what you expect it to find. Decide it deliberately when you place the unit: two units whose scopes overlap do the same work twice and neither reports the gap between them>",
+            "leader": {
+              "provider": "<string, required>",
+              "model": "<string, required>"
+            },
+            "equipment": [
+              "<array of string, optional — Built-in tool names and external equipment names the unit's tasks may use; a session task under the unit needs no more than this, and every session task runs in a session of its own>"
+            ],
+            "bashAllowlist": [
+              "<array of string, optional — Commands the unit's tasks' read-only Bash may run>"
+            ],
+            "role": "<string, optional — The role text the leader's session reads in place of the type's own; omit it for the type's>",
+            "config": "<string, optional — The name of a saved unit config (section 8 lists them) whose leader, equipment, bashAllowlist and role fill this unit's form; give only objective and parent beside it, or a field to override the config's>",
+            "ref": "<string, required — A label the plan uses to refer to this new unit elsewhere>",
+            "parent": "<string, required — An existing unit id, or the ref of a unit created in this plan>",
+            "type": "<string, optional — The unit's type, whose form these fields fill and whose protocol runs it: base, the led unit, is the only type a plan may create>",
+            "takes": "<string, optional — The id of an open reassignment this unit takes: the slice of a unit the IC closed with a reassign verdict, whose instructions and claims the new unit's leader is oriented with; every open reassignment is taken by exactly one new unit>",
+            "modelWhy": "<string, optional — Why the leader's model is larger than its work needs: required in substance when the leader is on an Opus or Fable model, since directing narrow tasks is Haiku or Sonnet work; omit it on a smaller model>"
+          }
+        ],
+        "closeUnits": [
+          {
+            "unitId": "<string, required>",
+            "reason": "<string, required>"
+          }
+        ],
+        "createTasks": [
+          {
+            "ref": "<string, optional — A label another task in this plan can name in dependsOn, so a chain of tasks runs in one cycle>",
+            "unit": "<string, required — An existing unit id, or the ref of a unit created in this plan>",
+            "resource": "<string, required>",
+            "objective": "<string, required>",
+            "inputs": "<object, required>",
+            "expectedOutput": "<string, required>",
+            "completionCriteria": [
+              "<array of string, required>"
+            ],
+            "evidenceRequired": [
+              "<array of string, required>"
+            ],
+            "dependsOn": [
+              "<array of string, required — Task ids, or refs of tasks created in this plan>"
+            ],
+            "evidenceFrom": {
+              "claims": [
+                "<array of string, optional>"
+              ],
+              "tasks": [
+                "<array of string, optional>"
+              ]
+            },
+            "scope": "<string, required — One line naming the territory this task owns, written so a sibling task can tell whose work is whose: the files, the surface or the question it covers. Every other task of the same unit is shown this line and told to stay out of it, so write what it covers and never what you expect it to find — a scope that leaks the picture makes a seat test your hypothesis instead of the evidence.>",
+            "settles": [
+              "<array of string, optional — The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task>"
+            ],
+            "instructions": "<string, required>",
+            "provider": "<string or null, required>",
+            "model": "<string or null, required>",
+            "modelWhy": "<string, optional — Why this task's model is larger than its kind of work needs: required in substance when the model is an Opus or Fable one, since recording, reproducing and reading are Haiku or Sonnet work and only weighing evidence to a conclusion may take Opus; omit it on a smaller model>",
+            "budget": {
+              "tokens": "<integer, optional>",
+              "seconds": "<number, optional>"
+            },
+            "strikeTeam": [
+              {
+                "kind": "<string, required — The kind's name, as the session names it when it sends a member: letters, digits, - and _>",
+                "model": "<string, required — A model the task's provider serves>",
+                "tools": [
+                  "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes>"
+                ],
+                "prompt": "<string, required — The member's system prompt>",
+                "count": "<integer, required — How many members the leader intends to send>",
+                "why": "<string, required — Why this team, this shape and this count>"
+              }
+            ]
+          }
+        ],
+        "cancelTasks": [
+          "<array of string, required>"
+        ],
+        "questionsForHuman": [
+          "<array of string, required>"
+        ],
+        "grantRequests": [
+          {
+            "resource": "<string, required>",
+            "effect": "<one of `read_only`, `writes_local`, `writes_external`, required>",
+            "reason": "<string, required>"
+          }
+        ],
+        "resourceGaps": [
+          {
+            "need": "<string, required>",
+            "why": "<string, required>"
+          }
+        ],
+        "applySops": [
+          {
+            "sop": "<string, required>",
+            "parent": "<string, required>",
+            "angles": [
+              "<array of string, required>"
+            ]
+          }
+        ],
+        "incidentStatus": "<one of `continue`, `blocked`, `satisfied`, `failed`, required>",
+        "rationale": "<string, required — Why this plan, one paragraph: how it works the open items of the IC's situation, and the priority that chose between plans>",
+        "discrepancy": "<string, optional — Only when the update received describes a different problem from the one being worked, not a different detail: what differs>"
+      },
+      "rationale": "<string, required — Why this verdict, one paragraph>",
+      "discrepancy": "<string, optional — Only when the update received describes a different problem from the one being worked, not a different detail: what differs>",
+      "briefingEvaluation": [
+        {
+          "item": "<string, required — The briefing item, as the briefing states it>",
+          "verdict": "<one of `accepted`, `rewritten`, `discarded`, required>",
+          "why": "<string, required>"
+        }
+      ]
+    },
+    "LeaderTurn": {
+      "kind": "<one of `report`, `continue`, required>",
+      "report": {
+        "outcome": "<one of `met`, `not_met`, `progress`, required>",
+        "changed": [
+          {
+            "what": "<string, required — One thing that is now true that was not, in one line>",
+            "claims": [
+              "<array of string, required — Claim ids the change rests on>"
+            ]
+          }
+        ],
+        "pictureChanged": "<boolean, required — Whether what the unit found changes the picture the incident is working from, so the IC should act before anything new starts>",
+        "situation": {
+          "picture": "<string, required — What your unit now believes about its slice of the problem, one paragraph>",
+          "evidence": [
+            {
+              "claimId": "<string, required>",
+              "stance": "<one of `for`, `against`, required — Whether the claim supports the picture or contradicts it>"
+            }
+          ],
+          "open": [
+            {
+              "what": "<string, required — What is not yet known, one line>",
+              "settledBy": "<string, required — What would settle it, in prose: what must be read, run or reproduced; the plan's task that works it names this item's id in settles>"
+            }
+          ],
+          "changed": "<string, required — What changed in your unit's picture since its last report>"
+        },
+        "why": "<string, optional — When the objective is not met: why>",
+        "suggestion": "<string, optional — When the objective is not met: what to do about it>",
+        "resourceRequests": [
+          {
+            "kind": "<one of `permission`, `missing_means`, `human_knowledge`, required>",
+            "what": "<string, required — What is lacked, in one line>",
+            "why": "<string, required — Why the unit's objective needs it>"
+          }
+        ]
+      },
+      "assignTasks": [
+        {
+          "ref": "<string, optional — A label another task in this plan can name in dependsOn, so a chain of tasks runs in one cycle>",
+          "unit": "<string, required — An existing unit id, or the ref of a unit created in this plan>",
+          "resource": "<string, required>",
+          "objective": "<string, required>",
+          "inputs": "<object, required>",
+          "expectedOutput": "<string, required>",
+          "completionCriteria": [
+            "<array of string, required>"
+          ],
+          "evidenceRequired": [
+            "<array of string, required>"
+          ],
+          "dependsOn": [
+            "<array of string, required — Task ids, or refs of tasks created in this plan>"
+          ],
+          "evidenceFrom": {
+            "claims": [
+              "<array of string, optional>"
+            ],
+            "tasks": [
+              "<array of string, optional>"
+            ]
+          },
+          "instructions": "<string, required>",
+          "provider": "<string or null, required>",
+          "model": "<string or null, required>",
+          "modelWhy": "<string, optional — Why this task's model is larger than its kind of work needs: required in substance when the model is an Opus or Fable one, since recording, reproducing and reading are Haiku or Sonnet work and only weighing evidence to a conclusion may take Opus; omit it on a smaller model>",
+          "budget": {
+            "tokens": "<integer, optional>",
+            "seconds": "<number, optional>"
+          },
+          "strikeTeam": [
+            {
+              "kind": "<string, required — The kind's name, as the session names it when it sends a member: letters, digits, - and _>",
+              "model": "<string, required — A model the task's provider serves>",
+              "tools": [
+                "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes>"
+              ],
+              "prompt": "<string, required — The member's system prompt>",
+              "count": "<integer, required — How many members the leader intends to send>",
+              "why": "<string, required — Why this team, this shape and this count>"
+            }
+          ]
+        }
+      ],
+      "consult": [
+        "<array of string, optional — Task ids of your unit, or refs of tasks in assignTasks on this turn, whose ending you want to be called on however it ends. A completed task you have not named here starts what depends on it without you and reaches you on your next turn; a failed or insufficient one calls you regardless. Name a task once; the flag holds until it ends>"
+      ],
+      "discrepancy": "<string, optional — Only when the update received describes a different problem from the one being worked, not a different detail: what differs>"
+    },
+    "UnitSituation": {
+      "picture": "<string, required — What your unit now believes about its slice of the problem, one paragraph>",
+      "evidence": [
+        {
+          "claimId": "<string, required>",
+          "stance": "<one of `for`, `against`, required — Whether the claim supports the picture or contradicts it>"
+        }
+      ],
+      "open": [
+        {
+          "what": "<string, required — What is not yet known, one line>",
+          "settledBy": "<string, required — What would settle it, in prose: what must be read, run or reproduced; the plan's task that works it names this item's id in settles>"
+        }
+      ],
+      "changed": "<string, required — What changed in your unit's picture since its last report>"
+    },
+    "HandoffDocument": {
+      "period": {
+        "objectives": [
+          "<array of string, required — The current period's objectives, as you set them>"
+        ],
+        "priorities": [
+          "<array of string, required — The priorities as you restated or revised them>"
+        ],
+        "why": "<string, required — Why the objectives and priorities are what they are: what the reports and the file told you that chose them>"
+      },
+      "units": [
+        {
+          "unitId": "<string, required>",
+          "state": "<string, required — Where the unit stands against its objective, in your reading: what it has established, what it has left>",
+          "waitsOn": "<string, optional — What the unit waits on, when it waits: a task in flight, an answer, a resource request>"
+        }
+      ],
+      "hypothesis": {
+        "statement": "<string, required — Your current reading of the incident>",
+        "claims": [
+          "<array of string, required — The claim ids it rests on; empty when it rests on none yet>"
+        ]
+      },
+      "setAside": [
+        {
+          "what": "<string, required>",
+          "why": "<string, required>"
+        }
+      ],
+      "nextMove": "<string, required — What you intended to do on your next turn, and what would have changed your mind>"
+    }
+  }
+}

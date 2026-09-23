@@ -515,11 +515,11 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
     - `evidenceFrom` (object, optional): Claims by id and tasks by id or ref whose content this task needs; the runtime attaches them, so do not copy evidence into inputs
       - `claims` (array of string, optional)
       - `tasks` (array of string, optional)
-  - `scope` (string, required): One line naming the territory this task owns, written so a
-    sibling task can tell whose work is whose: the files, the surface or the question it covers.
-    Every other task of the same unit is shown this line and told to stay out of it, so write what
-    it covers and never what you expect it to find — a scope that leaks the picture makes a seat
-    test your hypothesis instead of the evidence.
+    - `scope` (string, required): One line naming the territory this task owns, written so a
+      sibling task can tell whose work is whose: the files, the surface or the question it covers.
+      Every other task of the same unit is shown this line and told to stay out of it, so write what
+      it covers and never what you expect it to find — a scope that leaks the picture makes a seat
+      test your hypothesis instead of the evidence.
     - `settles` (array of string, optional): The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task
     - `instructions` (string, required)
     - `provider` (string or null, required)
@@ -539,10 +539,10 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
 - `plan` (object, optional): With verdict amend: the whole plan as amended, which is applied in place of the draft
   - `createUnits` (array of objects, required)
     - `objective` (string, required): What the unit is to establish; its leader reports against it, and the IC judges the report
-  - `scope` (string, required): One line naming the territory this unit covers, written so another unit can tell
-    whose ground is whose: the area, the surface or the question it owns. Every other unit is shown this line, and so
-    is the IC, so write what it covers and never what you expect it to find. Decide it deliberately when you place the
-    unit: two units whose scopes overlap do the same work twice and neither reports the gap between them
+    - `scope` (string, required): One line naming the territory this unit covers, written so another unit can tell
+      whose ground is whose: the area, the surface or the question it owns. Every other unit is shown this line, and so
+      is the IC, so write what it covers and never what you expect it to find. Decide it deliberately when you place the
+      unit: two units whose scopes overlap do the same work twice and neither reports the gap between them
     - `leader` (object, optional): The provider and model of the unit's leader session, which directs the unit's tasks, runs none of them and holds no tools, and reports against its objective
       - `provider` (string, required)
       - `model` (string, required)
@@ -571,11 +571,11 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
     - `evidenceFrom` (object, optional): Claims by id and tasks by id or ref whose content this task needs; the runtime attaches them, so do not copy evidence into inputs
       - `claims` (array of string, optional)
       - `tasks` (array of string, optional)
-  - `scope` (string, required): One line naming the territory this task owns, written so a
-    sibling task can tell whose work is whose: the files, the surface or the question it covers.
-    Every other task of the same unit is shown this line and told to stay out of it, so write what
-    it covers and never what you expect it to find — a scope that leaks the picture makes a seat
-    test your hypothesis instead of the evidence.
+    - `scope` (string, required): One line naming the territory this task owns, written so a
+      sibling task can tell whose work is whose: the files, the surface or the question it covers.
+      Every other task of the same unit is shown this line and told to stay out of it, so write what
+      it covers and never what you expect it to find — a scope that leaks the picture makes a seat
+      test your hypothesis instead of the evidence.
     - `settles` (array of string, optional): The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task
     - `instructions` (string, required)
     - `provider` (string or null, required)

@@ -208,6 +208,17 @@ export function cutoffBefore(workStarts, hoursBefore, from = new Date()) {
 }
 
 /** The field list of one returned object (`IncidentBriefing`, `ActionPlan`, `LeaderTurn`, a resource's result), from the protocol's Formats section, so a brief tells the seat the exact shape it returns. */
+/**
+ * The shape a seat fills: the object in the form it returns it in, every value the instruction
+ * for that field. references/protocol-objects.json is generated from the protocol, so this and
+ * the document cannot disagree. Falls back to the protocol's prose if the file is missing.
+ */
+export function shapeOf(objectName) {
+  try {
+    const doc = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "references", "protocol-objects.json"), "utf8"));
+    return doc.shapes?.[objectName] ?? fieldListOf(objectName);
+  } catch { return fieldListOf(objectName); }
+}
 export function fieldListOf(objectName) {
   const doc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "references", "noscope-protocol.md"), "utf8");
   const lines = doc.split("\n");

@@ -8,7 +8,12 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { readInput, openIncident, ENDED, run, out, ROLE, inflight, inflightPath } from "./lib.mjs";
 
-if (ROLE !== "ic") process.exit(0);          // a leader session idles between messages
+// A leader cycles on its own unit, the same way the IC cycles on the incident. It idled here
+// before, so a task ending in its own unit had to go up to the IC, which built a turn brief and
+// sent it back down: three hops for work that never left the unit. A leader is woken by the
+// ending itself now, and the IC hears from it when something crosses the unit's boundary.
+const UNIT = process.env.NOSCOPE_UNIT ?? null;
+if (ROLE !== "ic" && !(ROLE === "leader" && UNIT)) process.exit(0);
 const input = readInput();
 if (input.agent_id || input.stop_hook_active) process.exit(0);
 const inc = openIncident(input.cwd);
@@ -28,8 +33,15 @@ if (inflight(inc.folder, input.session_id) > 0) {
 if (runCfg?.mode === "cutoff" && runCfg.cutoffAt && new Date() >= new Date(runCfg.cutoffAt)) {
   out({ systemMessage: `[noscope] the cutoff ${runCfg.cutoffAt} has passed; the incident stays open for /noscope-resume` }); process.exit(0);
 }
-const next = run("incident_next.mjs", [statePath]);
+const next = run("incident_next.mjs", ROLE === "leader" ? [statePath, "--unit", UNIT] : [statePath]);
 let n; try { n = JSON.parse(next.out); } catch { process.exit(0); }
+if (ROLE === "leader") {
+  // The leader's own unit: tasks it can spawn, endings it has not heard, a report it owes.
+  const work = (n.start?.length ?? 0) + (n.reasons?.length ?? 0);
+  if (!work) process.exit(0);
+  out({ decision: "block", reason: `[noscope] Your unit has work; do it and reply to the IC only when something crosses your unit's boundary (/noscope-lead section 3). Next:\n${next.out}` });
+  process.exit(0);
+}
 // Work the IC can do now: tasks to start, leaders to call, or its own turn when nothing is in
 // flight. While seats are running and nothing is startable, the IC waits for their endings
 // (the leaders message it); pushing it then only buys idle turns.

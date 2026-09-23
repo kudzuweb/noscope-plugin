@@ -84,6 +84,28 @@ node "$S/incident_validator.mjs" plan "$F/incident.json" "$F/draft-1.json" >/dev
 grep -q '"type":"plan.reviewed"' "$F/log.jsonl" || fail "review not logged"
 node "$S/incident_apply.mjs" plan "$F/incident.json" "$F/draft-1.json" >/dev/null || fail "plan apply"
 
+step "a seat is handed the shape it fills, and the shapes match the protocol"
+node "$S/build_shapes.mjs" --check >/dev/null || fail "references/protocol-objects.json and the protocol have drifted; run node scripts/build_shapes.mjs"
+node "$S/incident_brief.mjs" planner "$F/incident.json" > "$T/shape.json" || fail "no planner brief"
+cat > "$T/shape.js" <<'JS'
+const fs = require("fs");
+const b = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const bad = [];
+const r = b.returns;
+if (typeof r !== "object" || Array.isArray(r) || r === null) bad.push("returns is not a shape, it is " + typeof r);
+else {
+  // The shape must be the object's own shape: arrays where the protocol says array, and a
+  // scope on a task, which is where three misindented bullets used to put it elsewhere.
+  if (!Array.isArray(r.createTasks)) bad.push("createTasks is not an array in the shape");
+  const t = (r.createTasks || [])[0] || {};
+  if (typeof t.scope !== "string") bad.push("a task in the shape has no scope");
+  if (typeof t.objective !== "string") bad.push("a task in the shape has no objective");
+  if ("scope" in r) bad.push("scope sits on the plan itself, not on a task");
+}
+if (bad.length) { console.error(bad.join("; ")); process.exit(1); }
+JS
+node "$T/shape.js" "$T/shape.json" || fail "the planner is not handed a fillable shape"
+
 step "nothing tells a seat to read a file the plugin has not got"
 cat > "$T/paths.js" <<'JS'
 const fs = require("fs"), path = require("path");
@@ -201,7 +223,7 @@ if [ -f "$T/noscope-unit.json" ]; then
   node "$S/incident_validator.mjs" plan "$F/incident.json" "$T/noscope-unit.json" 2>&1 | grep -q "has no scope" || fail "a plan creating a unit with no scope was accepted"
 fi
 
-step "a task brief carries its siblings' scopes and never their objectives"step "a task brief carries its siblings' scopes and never their objectives"
+step "a task brief carries its siblings' scopes and never their objectives"
 node "$S/incident_brief.mjs" task "$F/incident.json" 001-t02 > "$T/brief-t02.json"
 node -e '
 const b = require(process.argv[1]);
@@ -237,6 +259,29 @@ out=$(seat_stop noscope:task-reproduce t2 "$R2"); expect_silent "$out" result-t0
 node "$S/incident_apply.mjs" ending "$F/incident.json" "$F/hooks/$(ls -t "$F/hooks" | grep '^task-reproduce' | head -1)" 001-t02 2>/dev/null && fail "a second ending of the same task was applied"
 out=$(seat_stop noscope-task-reproduce-001-t02 t2 '"just prose, no object"'); expect_silent "$out" "a finished seat resumed by a message is left alone"
 node -e 'const s=require(process.argv[1]);if(s.claims.filter(c=>c.provenance.taskId==="001-t02").length!==3)process.exit(1)' "$F/incident.json" || fail "claims duplicated by a second ending"
+step "a leader is shown its own unit, and the IC is no longer the courier for it"
+node "$S/incident_next.mjs" "$F/incident.json" --unit 001-u01 > "$T/unitview.json" || fail "no unit view"
+cat > "$T/uv.js" <<'JS'
+const fs = require("fs");
+const v = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const ic = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+const bad = [];
+for (const k of ["unitId", "objective", "scope", "reasons", "unheard", "ready", "running", "reportDue"])
+  if (!(k in v)) bad.push("the unit view lacks " + k);
+if (v.unitId !== "001-u01") bad.push("the unit view is for " + v.unitId);
+// A leader sees its own unit only: no other unit, and nothing of the IC's picture.
+const text = JSON.stringify(v);
+if (/001-u0[^1]/.test(text)) bad.push("the unit view names another unit");
+for (const k of ["situation", "picture", "claims", "reports"]) if (k in v) bad.push("the unit view carries the IC's " + k);
+// The IC is not called for a task ending the leader handles itself.
+for (const c of ic.call || []) for (const r of c.reasons || [])
+  if (/^task .* (failed|came back insufficient|completed)/.test(r)) bad.push("the IC is still called for a task ending: " + r);
+if (bad.length) { console.error(bad.join("; ")); process.exit(1); }
+JS
+node "$S/incident_next.mjs" "$F/incident.json" > "$T/icview.json"
+node "$T/uv.js" "$T/unitview.json" "$T/icview.json" || fail "the layers are not separated as intended"
+node "$S/incident_next.mjs" "$F/incident.json" --unit 001-u99 >/dev/null 2>&1 && fail "a unit view was built for a unit that does not exist"
+
 step "the record keeps a line of a session task, and the body stays in its file"
 cat > "$T/lean.js" <<'JS'
 const fs = require("fs");
@@ -309,7 +354,7 @@ step "the leader's turn prompt through the brief guard, then its report recorded
 node "$S/incident_brief.mjs" turn "$F/incident.json" 001-u01 > "$F/turn-001-u01-1.json"
 node -e 'const [f,cwd,to,msg]=process.argv.slice(1);require("fs").writeFileSync(f,JSON.stringify({cwd,tool_name:"SendMessage",tool_input:{to,message:msg}}))' "$T/in.json" "$CWD" noscope-001-001-u01 "Brief file: $F/turn-001-u01-1.json. Plugin root: $P. Run folder: $F. Your unit: 001-u01."
 node "$H/noscope-guard-brief.mjs" < "$T/in.json" || fail "guard refused the turn prompt by file"
-node -e 'const b=require(process.argv[1]);if(!b.returns||!/LeaderTurn|kind/.test(b.returns))process.exit(1)' "$F/turn-001-u01-1.json" || fail "turn brief carries no returns"
+node -e 'const b=require(process.argv[1]);const r=b.returns;if(!r||typeof r!=="object"||!("kind" in r))process.exit(1)' "$F/turn-001-u01-1.json" || fail "turn brief carries no LeaderTurn shape"
 L='{"unitId":"001-u01","kind":"report","report":{"outcome":"met","changed":[{"what":"The page container, not the rail, scrolls after a deletion","claims":["001-c01","001-c02"]}],"pictureChanged":false,"situation":{"picture":"The page container scrolls after a delete; the rail does not.","evidence":[{"claimId":"001-c01","stance":"for"},{"claimId":"001-c02","stance":"for"},{"claimId":"001-c03","stance":"for"}],"open":[{"what":"which focus() site runs on deletion","settledBy":"reading the source"}],"changed":"two reproductions agreed"},"resourceRequests":[{"kind":"human_knowledge","what":"Which browser did the reporter use?","why":"the rail behaves differently in Safari"}]},"assignTasks":[],"consult":[]}'
 printf '%s' "$L" > "$F/leader-001-u01-1.json"
 node "$S/incident_validator.mjs" leader "$F/incident.json" "$F/leader-001-u01-1.json" 001-u01 >/dev/null || fail "leader turn rejected"
