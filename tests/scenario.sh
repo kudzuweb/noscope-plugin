@@ -345,9 +345,14 @@ grep -q "^up: noscope-scenario-leader reached its session" <<<"$out" || fail "th
 # With no marker, it retries the configured number of times and then reports how to do it by hand.
 rm -f "$UP"
 out=$(NOSCOPE_LAUNCH_NO_OPEN=1 NOSCOPE_LAUNCH_TIMEOUT=1 NOSCOPE_LAUNCH_TRIES=2 bash "$S/launch-session.sh" leader "$F" claude-sonnet-5 noscope-scenario-leader 001-u01 2>&1) && fail "the launcher reported success for a tab that never came up"
+# It retries, then hands the decision back rather than deciding for the seat.
+case "$out" in *"attempt 2 of 2"*) ;; *) fail "the launcher did not retry before giving up: $out";; esac
+case "$out" in *"yours to decide"*) ;; *) fail "the launcher did not hand the decision back to the seat: $out";; esac
+case "$out" in *"role=leader unit=001-u01"*) ;; *) fail "the launcher did not say which seat failed: $out";; esac
+case "$out" in *"cd \""*) ;; *) fail "the launcher did not print the command a human could run: $out";; esac
 grep -q "opening it again (attempt 2 of 2)" <<<"$out" || fail "the launcher did not retry: $out"
 grep -q "never came up after 2 attempts" <<<"$out" || fail "the launcher did not report the failure: $out"
-grep -q "Run this in a terminal instead" <<<"$out" || fail "the launcher did not print the manual command: $out"
+grep -q "the command, if a human runs it in a terminal" <<<"$out" || fail "the launcher did not print the manual command: $out"
 rm -f "$UP"
 
 step "the leader's turn prompt through the brief guard, then its report recorded by the leader itself"

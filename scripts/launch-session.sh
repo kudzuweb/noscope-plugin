@@ -131,7 +131,16 @@ while :; do
   echo "launch-session.sh: $name did not come up within ${timeout}s; opening it again (attempt $((attempt + 1)) of $tries)" >&2
   attempt=$((attempt + 1))
 done
-echo "launch-session.sh: $name never came up after $tries attempts of ${timeout}s each." >&2
-echo "launch-session.sh: opened with the $opener${file:+ (tab config $file)}. Run this in a terminal instead:" >&2
+# Two retries and then it is the calling seat's decision, not the launcher's. The launcher knows
+# a tab did not come up; it does not know whether this seat matters enough to wait for a human,
+# whether the work can be reassigned, or whether the incident should go on without it. So it
+# reports what it tried and hands the choice back, rather than leaving a seat to infer one.
+echo "launch-session.sh: $name never came up after $tries attempts of ${timeout}s each, opened with the $opener${file:+ (tab config $file)}." >&2
+echo "launch-session.sh: role=$role${unit:+ unit=$unit} model=$model" >&2
+echo "launch-session.sh: the command, if a human runs it in a terminal:" >&2
 echo "  cd \"$cwd\" && $cmd" >&2
+echo "launch-session.sh: this is yours to decide. In an attended run, give the human that command" >&2
+echo "  and carry on without the seat until it checks in. In an unattended run, do not wait on a" >&2
+echo "  check-in that will not arrive: a leader that cannot be launched leaves its unit unled, so" >&2
+echo "  close the unit or reassign its slice at your next turn and say which you did and why." >&2
 exit 1
