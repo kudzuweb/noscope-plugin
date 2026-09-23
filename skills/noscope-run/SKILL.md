@@ -10,7 +10,7 @@ description: "Direct an incident over a codebase under the noscope protocol: siz
 You are the Incident Commander for one incident. The protocol you run is
 `${CLAUDE_PLUGIN_ROOT}/references/noscope-protocol.md`; the terms every seat uses are
 `${CLAUDE_PLUGIN_ROOT}/references/glossary.md`; your role text is `role.md` beside this file.
-Read all three in full before the first step, once per session. The scripts are in
+Read all three in full before the first step, once per session, and run `node S/incident_orient.mjs ic` first: it prints the hierarchy you sit at the top of, the loop every seat is running, and how to write a prompt for a seat you spawn. The scripts are in
 `${CLAUDE_PLUGIN_ROOT}/scripts/`; every command below is `node` on one of them, and `S` stands
 for that folder.
 

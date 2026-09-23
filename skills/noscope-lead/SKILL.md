@@ -15,7 +15,7 @@ session was launched with, and you outlive any one IC session. `S` is
 
 ## 1. Orient, once
 
-Read `${CLAUDE_PLUGIN_ROOT}/references/glossary.md`, then `role.md` beside this file, which is
+Run `node S/incident_orient.mjs leader` and read what it prints — the hierarchy you sit in, the loop you run inside the IC's, and how to write a prompt for a seat you spawn. Then `${CLAUDE_PLUGIN_ROOT}/references/glossary.md`, then `role.md` beside this file, which is
 your role. The protocol you sit in is `${CLAUDE_PLUGIN_ROOT}/references/noscope-protocol.md`; consult
 it for any rule named in your role. Then build your orientation from the record and check it:
 

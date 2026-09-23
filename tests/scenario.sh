@@ -84,6 +84,21 @@ node "$S/incident_validator.mjs" plan "$F/incident.json" "$F/draft-1.json" >/dev
 grep -q '"type":"plan.reviewed"' "$F/log.jsonl" || fail "review not logged"
 node "$S/incident_apply.mjs" plan "$F/incident.json" "$F/draft-1.json" >/dev/null || fail "plan apply"
 
+step "every seat's orientation assembles from one file, and the record can name which"
+for k in ic leader planner sizeup task; do
+  node "$S/incident_orient.mjs" $k > "$T/orient-$k.txt" || fail "no orientation assembles for seat kind $k"
+  [ -s "$T/orient-$k.txt" ] || fail "the orientation for $k came out empty"
+  grep -q "Incident Command System" "$T/orient-$k.txt" || fail "$k is not told what the system is modelled on"
+  grep -q "observe, orient, decide, act" "$T/orient-$k.txt" || fail "$k is not told the loop it is part of"
+  grep -q "Observations flow up" "$T/orient-$k.txt" || fail "$k is not told which way orientation travels"
+done
+# Only the seats that spawn others are told how to write a prompt.
+grep -q "seat line and nothing else" "$T/orient-ic.txt" || fail "the IC is not told how to prompt a seat it spawns"
+grep -q "seat line and nothing else" "$T/orient-leader.txt" || fail "a leader is not told how to prompt a seat it spawns"
+grep -q "seat line and nothing else" "$T/orient-task.txt" && fail "a task seat spawns nothing and should not carry prompting rules"
+node "$S/incident_orient.mjs" nonesuch >/dev/null 2>&1 && fail "an unknown seat kind was given an orientation"
+node "$S/incident_orient.mjs" leader --stamp | grep -q "orientation: references/orientation.json@" || fail "the stamp does not name the file and commit the orientation came from"
+
 step "the seat line is built, and the guard reads back every field it puts in"
 node "$S/incident_brief.mjs" task "$F/incident.json" 001-t01 > "$T/sl-brief.json"
 LINE=$(node "$S/incident_seatline.mjs" "$F" task "$T/sl-brief.json" 001-t01) || fail "seat line not built"

@@ -27,42 +27,28 @@ process. Observations flow up; only objectives, instructions and evidence flow d
 
 ## The loop at every level: fractal OODA, with orientation flowing up
 
-The protocol is a set of nested observe, orient, decide, act loops, one per level, and
-every mechanism in it is one of those four steps at one level. Read this section as the
-reason each seat does what it does, and use it as the check that every step at every level
-is covered exactly once.
+The protocol is a set of nested observe, orient, decide, act loops, one per level, and every
+mechanism in it is one of those four steps at one level.
 
-One thing sets it apart from Boyd's loop, where orientation is shared and feeds every
-level: here orientation flows up only. A leader orients on its own slice and a task on its
-brief, never on the IC's picture, so their observations are not shaped by what the top
-expects to find, and their reports revise the top's orientation rather than confirm it.
-`assessment` is the top loop's orient step made explicit: `priors_updated` and
-`tactics_change` are the loop admitting it was wrong.
+One thing sets it apart from Boyd's loop, where orientation is shared and feeds every level:
+here orientation flows up only. A leader orients on its own slice and a task on its brief, never
+on the IC's picture, so their observations are not shaped by what the top expects to find, and
+their reports revise the top's orientation rather than confirm it. `assessment` is the top loop's
+orient step made explicit: `priors_updated` and `tactics_change` are the loop admitting it was
+wrong.
 
 | Level, and its cadence | Observe | Orient | Decide | Act |
 |---|---|---|---|---|
-| The human, per incident | Reads the After Action Review, or a question the IC raises. | Their own priorities, which the protocol never holds. | Answers, merges or drops the result. | Sets the next incident's objective, constraints and priorities. |
-| The IC, per operational period | Reads the change report: every report with its slice picture and the work beneath it, every ending under command, answers, refusals. | Rewrites the situation: `picture`, `evidence` for and against, `open` items, `assessment`, `changed`. | Gives each report its verdict; sets the period's objectives and priorities; approves, patches or amends the plan; declares the status. | Units open and close, tasks start, questions go to the human. |
-| The planner, per period (a staff step inside the IC's loop, not a loop of its own) | Reads `incident.json`. | None of its own: it works the IC's orientation. | Drafts the tactics as a suggestion. | Nothing; the IC acts. |
-| A unit leader, per decision | Reads the endings it has not heard, one line each. | Its own picture of its slice, carried on every report. | Assigns tasks, flags `consult`, or reports `met`, `not_met` or `progress`. | Tasks start under its unit. |
-| A task session, per task | What its tools find and the evidence attached to its brief. | The brief's completion criteria and evidence required. | `answered` or `insufficient`, and the basis and confidence of each claim. | Claims and findings into the record. |
-| A deterministic task | The command's output. | None. | None. | Evidence into the record. |
+| The human, per incident | The After Action Review, or a question the IC raises. | Their own priorities, which the protocol never holds. | Their answer, and what they do with the result. | The objective, constraints and priorities they set. |
+| The IC, per operational period | The change assembled from the log, and `incident.json`. | The `situation` it writes: `picture`, `evidence` for and against, `open`, `assessment`, `changed`. | Its `reportVerdicts`, `periodObjectives`, `priorities`, `incidentStatus`, and its review's verdict. | The plan it applies, and the tasks it assigns under command. |
+| The planner, per period, a staff step inside the IC's loop | Reads `incident.json`. | None of its own: it works the IC's orientation. | Drafts the tactics as a suggestion. | Nothing; the IC acts. |
+| A unit leader, per decision | The endings it has not heard, one line each. | The `situation` on its report: its own picture of its slice. | Its `assignTasks`, `consult`, or `report` of `met`, `not_met` or `progress`. | The tasks it assigns under its unit. |
+| A task session, per task | The evidence in its brief, and what its tools find. | The brief's `completionCriteria` and `evidenceRequired`. | The result's `outcome`, and each claim's `basis` and `confidence`. | The result's `claims` and `findings`. |
 
-Where each step is covered, so coverage can be checked; the names are fields of the
-objects each seat returns (defined under Formats) and the messages you write:
-
-| Level | Observe is | Orient is | Decide is | Act is |
-|---|---|---|---|---|
-| The human | The After Action Review you hand over; a question you raise | Outside the protocol | Their answer, what they do with the result | The objective, constraints and priorities they give you |
-| You, the IC | The change you assemble from the log, and `incident.json` | The `situation` you write on your command turn | Your command turn's `reportVerdicts`, `periodObjectives`, `priorities` and `incidentStatus`, and your review's `approve`, `correct` or `amend` | The plan you apply; the deterministic tasks you assign under command |
-| A unit leader | The unheard endings in the message you send it | The `situation` on its report | Its turn's `assignTasks`, `consult`, or `report` | The tasks it assigned, which you start |
-| A task session | The evidence in its brief and what its tools find | The brief's `completionCriteria` and `evidenceRequired` | The result's `outcome`, and each claim's `basis` and `confidence` | The result's `claims` and `findings`, which you record |
-
-Two rules follow from the table. A step covered twice at one level is a model call spent
-for process, so a leader is called only at decisions and never to re-decide a completion
-the task already judged. A step covered at the wrong level is a misconception propagating,
-so the IC's picture never enters a leader's orientation, where it would sit inside a lower
-loop's observe step.
+Two rules follow from the table. A step covered twice at one level is a model call spent on
+process, so a leader is called at decisions and never to re-decide a completion the task already
+judged. A step covered at the wrong level is a misconception propagating, so the IC's picture
+never enters a leader's orientation, where it would sit inside a lower loop's observe step.
 
 ## The hierarchy and the information loops, as a diagram
 
