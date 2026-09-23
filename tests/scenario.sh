@@ -121,6 +121,10 @@ step "session names are built by one script, so launching and looking up agree"
 ic=$(node "$S/incident_name.mjs" "$F" ic); ul=$(node "$S/incident_name.mjs" "$F" leader 001-u01)
 case "$ic" in IC-001-*) ;; *) fail "the IC name does not carry its role and incident: $ic";; esac
 case "$ul" in UL-001-1-*) ;; *) fail "a leader name does not carry its role, incident and unit: $ul";; esac
+# A task's name carries its whole id, because noscope-seat-stop.mjs recovers the task from the
+# agent's name with /(\d{3}-t\d+)/ when a seat returns no id of its own.
+tn=$(node "$S/incident_name.mjs" "$F" task 001-t01)
+node -e 'const n=process.argv[1];const m=/(\d{3}-t\d+)/.exec(n);if(!m||m[1]!=="001-t01")process.exit(1)' "$tn" || fail "the hook cannot recover a task id from the name it is given: $tn"
 [ "$(node "$S/incident_name.mjs" "$F" ic)" = "$ic" ] || fail "the same call gave two different names"
 [ "$(node "$S/incident_name.mjs" "$F" leader 001-command)" = "$ic" ] || fail "the command unit should name the IC, not a second seat"
 [ "$(node "$S/incident_name.mjs" "$F" ic 2)" != "$ic" ] || fail "a successor takes the same name as the session handing over"

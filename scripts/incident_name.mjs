@@ -17,7 +17,7 @@
 //
 //   IC-014-scroll-after-delete          the Incident Commander of incident 014
 //   UL-014-1-which-container-scrolls    the leader of that incident's first unit
-//   TSK-014-3-reproduce-on-local        a refused task rerun as a session
+//   TSK-014-t03-reproduce-on-local      a refused task rerun as a session
 //
 // The trailing words come from that seat's own objective, so a tab bar full of sessions reads
 // as the work rather than as a list of ids. They are decoration for a human: everything that
@@ -76,7 +76,10 @@ if (role === "ic") {
 } else if (role === "task") {
   const t = state.tasks.find((x) => x.id === id);
   if (!t) { console.error(`no task ${id} in ${statePath}`); process.exit(2); }
-  name = `TSK-${incidentId}-${unitNumber(t.id, incidentId).replace(/^t0*/, "")}-${slug(t.objective)}`;
+  // The task id whole, not its number: hooks/noscope-seat-stop.mjs recovers a task from the
+  // agent's name with /(\d{3}-t\d+)/ when a seat returns no id of its own, and it is the string
+  // anyone greps the record with.
+  name = `TSK-${t.id}-${slug(t.objective)}`;
 } else { console.error("role is ic, leader or task"); process.exit(2); }
 
 // launch-session.sh accepts letters, digits, dot, underscore and dash, and a seat with no
