@@ -480,7 +480,11 @@ function checkBrief(b, kind, id) {
     noPicture(b, "a task brief");
   } else if (kind === "planner") {
     need(["incident", "checklist", "ask"], "the planner's ask");
-    for (const k of ["incident", "period", "situation", "units", "tasks", "claims", "evidence", "reassignments", "resources"]) if (!(k in (b.incident ?? {}))) reject("Brief complete", `the planner's copy of incident.json lacks "${k}"`);
+    // What a planner plans from, which is not the whole record: finished tasks are in
+    // sinceLastPlan and their bodies are in the files the record points at.
+    for (const k of ["incident", "period", "situation", "units", "claims", "openTasks", "evidence", "reassignments", "questions", "resources"]) if (!(k in (b.incident ?? {}))) reject("Brief complete", `the planner's base lacks "${k}"`);
+    if ("tasks" in (b.incident ?? {})) reject("Brief complete", "the planner's base carries every task; it takes openTasks, and what the last plan finished is in sinceLastPlan");
+    if (!("sinceLastPlan" in b)) reject("Brief complete", "the planner's brief carries no sinceLastPlan; without it a fresh planner cannot tell what the last plan accomplished");
   } else if (kind === "sizeup") {
     need(["objective", "constraints", "priorities", "workingDirectory", "ask"], "the size-up ask");
     noPicture(b, "the size-up ask");

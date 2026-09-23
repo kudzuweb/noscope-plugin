@@ -541,6 +541,33 @@ node "$H/noscope-log-turn.mjs" < "$T/in.json"
 after=$(grep -c '"type":"call"' "$F/log.jsonl")
 [ "$before" = "$after" ] || fail "the turn hook logged into an ended incident: $before -> $after call(s)"
 
+step "the planner is handed what it plans from, not the whole record"
+node "$S/incident_brief.mjs" planner "$F/incident.json" > "$T/pb.json" || fail "no planner brief"
+node "$S/incident_validator.mjs" brief "$F/incident.json" "$T/pb.json" planner >/dev/null || fail "the composed planner brief does not pass its own check"
+cat > "$T/pb.js" <<'JS'
+const fs = require("fs");
+const b = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const bad = [];
+const base = b.incident || {};
+for (const k of ["incident","period","situation","units","claims","openTasks","evidence","reassignments","questions","resources"])
+  if (!(k in base)) bad.push("the base lacks " + k);
+if ("tasks" in base) bad.push("the base still carries every task");
+if (!b.sinceLastPlan) bad.push("no sinceLastPlan, so a fresh planner cannot tell what the last plan did");
+// A claim reaches the planner as a line: what it says and how firmly, not its measured object.
+for (const c of base.claims || []) if ("object" in c || "provenance" in c) { bad.push("claims are not lines: " + JSON.stringify(c).slice(0,80)); break; }
+// Nothing completed should be in openTasks; those belong to sinceLastPlan.
+for (const t of base.openTasks || []) if (!["pending","ready","running"].includes(t.status)) bad.push("openTasks holds a " + t.status + " task");
+if (bad.length) { console.error(bad.join("; ")); process.exit(1); }
+JS
+node "$T/pb.js" "$T/pb.json" || fail "the planner brief is not composed as intended"
+# It must be smaller than handing over the record.
+node -e '
+const fs=require("fs");
+const whole=fs.statSync(process.argv[1]).size, brief=JSON.parse(fs.readFileSync(process.argv[2],"utf8"));
+const base=JSON.stringify(brief.incident).length;
+if (base >= whole) { console.error(`the planner base is ${base} bytes against a ${whole}-byte record; it is not a slice`); process.exit(1); }
+' "$F/incident.json" "$T/pb.json" || fail "composing the planner base saved nothing"
+
 step "the audit reads the run and finds nothing wrong with a clean one"
 node "$S/incident_audit.mjs" "$F" > "$T/audit.txt" || fail "the audit did not run"
 grep -q "WHERE THE BYTES ARE" "$T/audit.txt" || fail "the audit printed no composition"

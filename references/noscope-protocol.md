@@ -41,7 +41,7 @@ wrong.
 |---|---|---|---|---|
 | The human, per incident | The After Action Review, or a question the IC raises. | Their own priorities, which the protocol never holds. | Their answer, and what they do with the result. | The objective, constraints and priorities they set. |
 | The IC, per operational period | The change assembled from the log, and `incident.json`. | The `situation` it writes: `picture`, `evidence` for and against, `open`, `assessment`, `changed`. | Its `reportVerdicts`, `periodObjectives`, `priorities`, `incidentStatus`, and its review's verdict. | The plan it applies, and the tasks it assigns under command. |
-| The planner, per period, a staff step inside the IC's loop | Reads `incident.json`. | None of its own: it works the IC's orientation. | Drafts the tactics as a suggestion. | Nothing; the IC acts. |
+| The planner, per period, a staff step inside the IC's loop | Reads its brief: the picture, the tree, what is established, what is still open, and what the last plan accomplished. | None of its own: it works the IC's orientation. | Drafts the tactics as a suggestion. | Nothing; the IC acts. |
 | A unit leader, per decision | The endings it has not heard, one line each. | The `situation` on its report: its own picture of its slice. | Its `assignTasks`, `consult`, or `report` of `met`, `not_met` or `progress`. | The tasks it assigns under its unit. |
 | A task session, per task | The evidence in its brief, and what its tools find. | The brief's `completionCriteria` and `evidenceRequired`. | The result's `outcome`, and each claim's `basis` and `confidence`. | The result's `claims` and `findings`. |
 

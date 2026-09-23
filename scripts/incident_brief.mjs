@@ -112,7 +112,32 @@ if (kind === "sizeup") {
     tasksInsufficientOrFailed: state.tasks.filter((t) => recentIds(["task.insufficient", "task.failed"]).has(t.id)).map(ending),
     reports: state.reports.filter((r) => log.some((e) => e.sequence > sinceSeq && e.type === "unit.reported" && e.reportId === r.id)).map((r) => ({ id: r.id, unitId: r.unitId, outcome: r.outcome, pictureChanged: r.pictureChanged, verdict: r.verdict ?? null, changes: r.changes, situation: r.situation })),
   };
-  out = { incident: state, checklist, rules: checklistText(), sinceLastPlan, returns: fieldListOf("ActionPlan"), models: { leader: resolveModel("leader", cfg) ?? "claude-sonnet-5", provider: "claude-code" }, seatModel: resolveModel("planner", cfg) ?? "claude-opus-5", ask: "Draft this operational period's tactics as an ActionPlan, a suggestion for the Incident Commander: units to open or close each with the territory it covers, tasks with resource, inputs, expected output, completion criteria, dependencies and the evidence each reads, the smallest model that fits each (Opus only with a modelWhy), what each task settles among situation.open, and any reassignment taken. Independent work runs in the same period. A unit's scope and a task's are decisions, not labels: every other unit is shown a unit's and every sibling task is shown a task's, so two that overlap do the same work twice and neither reports the gap between them." };
+  // What a planner plans from, not the whole record. It is spawned fresh each period and has no
+  // orientation of its own — it works the IC's — so it needs the picture, the tree, what is
+  // established and what is still open, plus what the last plan accomplished. It does not need
+  // every finished task's record: those tasks are in sinceLastPlan, and their bodies are in the
+  // files the record points at. On run 001 that is 46K where the whole state is 180K.
+  const OPEN_NOW = new Set(["pending", "ready", "running"]);
+  const plannerBase = {
+    incident: { objective: state.incident.objective, constraints: state.incident.constraints, priorities: state.incident.priorities,
+                workingDirectory: state.incident.workingDirectory, status: state.incident.status,
+                budget: state.incident.budget, spent: state.incident.spent },
+    period: state.period,
+    situation: state.situation,
+    units: (state.units ?? []).filter((u) => u.status !== "closed")
+      .map((u) => ({ id: u.id, parentId: u.parentId, type: u.type, objective: u.objective, scope: u.scope ?? null,
+                     status: u.status, leader: u.leader, equipment: u.equipment, bashAllowlist: u.bashAllowlist })),
+    // Claim lines: what is established and how firmly. The measured object belongs to the IC's
+    // picture, and a planner choosing the next tasks works from subject, basis and confidence.
+    claims: (state.claims ?? []).map(claimLine),
+    openTasks: (state.tasks ?? []).filter((t) => OPEN_NOW.has(t.status))
+      .map((t) => ({ id: t.id, unitId: t.unitId, resource: t.resource, objective: t.objective, scope: t.scope ?? null, status: t.status, dependsOn: t.dependsOn ?? [] })),
+    evidence: state.evidence ?? [],
+    reassignments: (state.reassignments ?? []).filter((r) => r.status === "open"),
+    questions: (state.questions ?? []).filter((q) => !q.answer),
+    resources: state.resources,
+  };
+  out = { incident: plannerBase, checklist, rules: checklistText(), sinceLastPlan, returns: fieldListOf("ActionPlan"), models: { leader: resolveModel("leader", cfg) ?? "claude-sonnet-5", provider: "claude-code" }, seatModel: resolveModel("planner", cfg) ?? "claude-opus-5", ask: "Draft this operational period's tactics as an ActionPlan, a suggestion for the Incident Commander: units to open or close each with the territory it covers, tasks with resource, inputs, expected output, completion criteria, dependencies and the evidence each reads, the smallest model that fits each (Opus only with a modelWhy), what each task settles among situation.open, and any reassignment taken. Independent work runs in the same period. A unit's scope and a task's are decisions, not labels: every other unit is shown a unit's and every sibling task is shown a task's, so two that overlap do the same work twice and neither reports the gap between them." };
 } else if (kind === "orientation") {
   const u = state.units.find((x) => x.id === id); if (!u) { console.error(`no unit ${id}`); process.exit(1); }
   const siblings = state.units.filter((x) => x.parentId === u.parentId && x.id !== u.id && x.status === "active").map((x) => ({ id: x.id, objective: x.objective, scope: x.scope ?? null }));
