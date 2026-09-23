@@ -350,6 +350,12 @@ case "$out" in *"attempt 2 of 2"*) ;; *) fail "the launcher did not retry before
 case "$out" in *"yours to decide"*) ;; *) fail "the launcher did not hand the decision back to the seat: $out";; esac
 case "$out" in *"role=leader unit=001-u01"*) ;; *) fail "the launcher did not say which seat failed: $out";; esac
 case "$out" in *"cd \""*) ;; *) fail "the launcher did not print the command a human could run: $out";; esac
+# A tab that boots and fails leaves its reason in a log beside the up marker; one that never ran
+# claude leaves none, and the launcher says which of the two happened. Only the second can be
+# produced here, because NO_OPEN means nothing is ever started.
+case "$out" in *"reported nothing, so claude never ran"*) ;; *) fail "the launcher did not distinguish a tab that never ran claude: $out";; esac
+grep -q "tee -a" "$S/launch-session.sh" || fail "the launched tab's stderr is no longer copied to a log, so a boot failure leaves no reason"
+grep -q 'errlog="\${up%.json}.err"' "$S/launch-session.sh" || fail "the reason log is no longer beside the up marker"
 grep -q "opening it again (attempt 2 of 2)" <<<"$out" || fail "the launcher did not retry: $out"
 grep -q "never came up after 2 attempts" <<<"$out" || fail "the launcher did not report the failure: $out"
 grep -q "the command, if a human runs it in a terminal" <<<"$out" || fail "the launcher did not print the manual command: $out"

@@ -52,6 +52,11 @@ esac
 # ran claude rather than dying in the shell. NOSCOPE_SEAT is what names it.
 env="$env NOSCOPE_SEAT='$name'"
 up=$(node -e 'import("'"$(cd "$(dirname "$0")" && pwd)"'/incident_lib.mjs").then(m=>process.stdout.write(require("node:path").join(m.NOSCOPE_HOME,"up",process.argv[1].replace(/[^A-Za-z0-9._-]/g,"_")+".json")))' "$name")
+# Where a tab that fails to boot leaves its reason. Claude Code writes a boot failure to both
+# streams and exits non-zero (verified 2026-09-22 against an unknown model id), so stderr is
+# enough to tell an overloaded provider from a bad model id from an authentication failure —
+# and an empty file from a tab where claude never ran at all.
+errlog="${up%.json}.err"
 # A fresh session in the tab stops at the folder-trust dialog until a human clicks it. The
 # plugin pre-accepts that only when the human turned preAccept on at install; otherwise the
 # tab waits, which is correct and is said out loud so an unattended run is not a mystery.
@@ -61,8 +66,11 @@ case "$trust" in *"preAccept is off"*) echo "note: $name will wait on its trust 
 # Single-quote the prompt safely: an apostrophe in it closes a naive '$prompt' early and the tab
 # sits at a shell continuation prompt instead of running claude (seen 2026-09-21 in the keeper launcher).
 shq() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
-if [ "$role" = start ]; then cmd="$env claude --model '$model' --name $name --remote-control $name \"$prompt\""
-else cmd="$env claude --model '$model' --name $name --remote-control $name${mode:+ --permission-mode $mode} $(shq "$prompt")"; fi
+# stderr is copied to a file as well as the terminal, so a tab that never comes up has left its
+# reason where the launcher can read it. stdout is untouched: that is the session's own screen.
+tap="2> >(tee -a '$errlog' >&2)"
+if [ "$role" = start ]; then cmd="$env claude --model '$model' --name $name --remote-control $name \"$prompt\" $tap"
+else cmd="$env claude --model '$model' --name $name --remote-control $name${mode:+ --permission-mode $mode} $(shq "$prompt") $tap"; fi
 color=$([ "$role" = leader ] && echo blue || echo red)
 # Opening a tab is the one thing this plugin cannot do portably, so it is the one thing it lets
 # the machine override. /noscope-install writes an adapter for whatever terminal is here; Warp on a
@@ -112,7 +120,7 @@ open_tab() {
 # NOSCOPE_LAUNCH_TIMEOUT and NOSCOPE_LAUNCH_TRIES exist for tests; leave them unset in a run.
 # NOSCOPE_LAUNCH_NO_OPEN makes the launcher skip `open`, which is how the scenario drives it.
 timeout=${NOSCOPE_LAUNCH_TIMEOUT:-30}; tries=${NOSCOPE_LAUNCH_TRIES:-3}
-rm -f "$up"
+rm -f "$up" "$errlog"
 attempt=1
 while :; do
   [ -n "${NOSCOPE_LAUNCH_NO_OPEN:-}" ] || open_tab
@@ -137,6 +145,17 @@ done
 # reports what it tried and hands the choice back, rather than leaving a seat to infer one.
 echo "launch-session.sh: $name never came up after $tries attempts of ${timeout}s each, opened with the $opener${file:+ (tab config $file)}." >&2
 echo "launch-session.sh: role=$role${unit:+ unit=$unit} model=$model" >&2
+if [ -s "$errlog" ]; then
+  echo "launch-session.sh: what the tab reported before it stopped ($errlog):" >&2
+  tail -n 6 "$errlog" | sed 's/^/    /' >&2
+  echo "launch-session.sh: decide on that reason. An overloaded or rate-limited provider is worth" >&2
+  echo "  waiting out and launching again; a model the catalogue does not carry is a wrong id in" >&2
+  echo "  the plan or the config and you can correct it; an authentication failure is the human's," >&2
+  echo "  so raise it as a question rather than retrying." >&2
+else
+  echo "launch-session.sh: the tab reported nothing, so claude never ran in it: the shell ate the" >&2
+  echo "  command, the tab never opened, or it is waiting on a dialog (preAccept is off)." >&2
+fi
 echo "launch-session.sh: the command, if a human runs it in a terminal:" >&2
 echo "  cd \"$cwd\" && $cmd" >&2
 echo "launch-session.sh: this is yours to decide. In an attended run, give the human that command" >&2
