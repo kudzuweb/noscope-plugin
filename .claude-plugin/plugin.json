@@ -1,6 +1,6 @@
 {
   "name": "noscope",
-  "version": "0.35.1",
+  "version": "0.36.0",
   "description": "Run an incident over a codebase with more than one session: one directs, a planner proposes each round's tactics, a session per slice of the problem assigns the work to subagents, and every result is evidence or a claim that says what it rests on. The parts that need no judgment are scripts and hooks; every model call is a decision.",
   "author": {
     "name": "kudzuweb"

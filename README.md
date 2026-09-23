@@ -110,6 +110,15 @@ repository you named at install (default `~/Documents/Projects/noscope-plugin-in
 and result, and at the end `after-action-review.txt` and `morning-report.md`; the directing session commits
 it at every turn of its own. Nothing is written into the repository the incident concerns. With `preAccept` on, the run does change one thing outside the record — the folder-trust flags for that repository in `~/.claude.json` — and puts them back as it found them when the incident ends.
 
+Where two seats would write the same file, the order is decided before they start rather than at a
+merge. A task names the files it expects to write, and two tasks that write one file are a
+dependency rather than parallel work, so that file is worked once at a time. For what the plan did
+not foresee, a seat reserves a file before writing it: every file nobody holds becomes its own and
+it carries on, and a file someone else holds is waited for while the rest of its work goes ahead.
+Its leader is told either way, or the Incident Commander when the holder is in another unit, since
+no leader can see another unit's work. Waiting that runs in a circle is reported at once instead,
+because no release is coming.
+
 | Skill | When |
 |---|---|
 | `/noscope-run <objective>` | Direct an incident from this session; lines `constraints:`, `priorities:`, `repo:` may follow. |

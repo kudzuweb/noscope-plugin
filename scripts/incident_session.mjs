@@ -15,6 +15,9 @@
 // incident ends, so `join` is for a session taking command of a run it did not open —
 // /noscope-resume — and for repairing a run whose markers were lost.
 import { existsSync } from "node:fs";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { joinSession, leaveSession, joinedSessions, pruneSessions, sessionId, SESSIONS_DIR } from "./incident_lib.mjs";
 
@@ -25,6 +28,17 @@ if (mode === "join") {
   const id = joinSession(a, b ?? sessionId());
   if (!id) { console.error("no session id: pass one, or set CLAUDE_CODE_SESSION_ID"); process.exit(2); }
   console.log(`session ${id} is a seat of ${a}; this session's noscope hooks run from here on`);
+  // A seat taking its place means there is work to watch. incident_init.mjs starts the failsafe
+  // for a run it opens, which leaves out every run that is taken up again rather than created: a
+  // resume after a reboot, after a crash, or after the last run on the machine ended and stopped
+  // the timer. A failsafe that is off for exactly the runs that went wrong is the wrong way round.
+  // The run itself must not fail over this, and a join is rare enough for the check to be free.
+  try {
+    const out = execFileSync("node", [join(dirname(fileURLToPath(import.meta.url)), "incident_daemon.mjs"), "ensure"], { encoding: "utf8" }).trim();
+    if (out) console.error(out.split("\n")[0]);
+  } catch (e) {
+    console.error(`WARN the failsafe watcher could not be started (${String(e.message ?? e).split("\n")[0]}); this seat is unaffected`);
+  }
 }
 else if (mode === "leave") {
   const id = leaveSession(a ?? sessionId());
