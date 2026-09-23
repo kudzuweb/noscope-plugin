@@ -126,7 +126,7 @@ if (kind === "sizeup") {
     situation: state.situation,
     units: (state.units ?? []).filter((u) => u.status !== "closed")
       .map((u) => ({ id: u.id, parentId: u.parentId, type: u.type, objective: u.objective, scope: u.scope ?? null,
-                     status: u.status, leader: u.leader, equipment: u.equipment, bashAllowlist: u.bashAllowlist })),
+                     status: u.status, leader: u.leader, resourcesAssigned: u.resourcesAssigned, bashAllowlist: u.bashAllowlist })),
     // Claim lines: what is established and how firmly. The measured object belongs to the IC's
     // picture, and a planner choosing the next tasks works from subject, basis and confidence.
     claims: (state.claims ?? []).map(claimLine),
@@ -142,7 +142,7 @@ if (kind === "sizeup") {
   const u = state.units.find((x) => x.id === id); if (!u) { console.error(`no unit ${id}`); process.exit(1); }
   const siblings = state.units.filter((x) => x.parentId === u.parentId && x.id !== u.id && x.status === "active").map((x) => ({ id: x.id, objective: x.objective, scope: x.scope ?? null }));
   const children = state.units.filter((x) => x.parentId === u.id && x.status === "active").map((x) => ({ id: x.id, objective: x.objective, scope: x.scope ?? null }));
-  out = { objective: state.incident.objective, periodObjectives: state.period?.objectives ?? [], unit: { id: u.id, objective: u.objective, scope: u.scope ?? null, equipment: u.equipment, bashAllowlist: u.bashAllowlist }, hierarchy: { parent: u.parentId, siblings, children } };
+  out = { objective: state.incident.objective, periodObjectives: state.period?.objectives ?? [], unit: { id: u.id, objective: u.objective, scope: u.scope ?? null, resourcesAssigned: u.resourcesAssigned, bashAllowlist: u.bashAllowlist }, hierarchy: { parent: u.parentId, siblings, children } };
   if (u.takes) { const r = state.reassignments.find((x) => x.id === u.takes); if (r) out.reassignment = { id: r.id, from: r.unitId, objective: r.objective, instructions: r.instructions, why: r.why, claims: state.claims.filter((c) => r.claims.includes(c.id)).map(claimLine) }; }
   if (u.lastPicture) out.lastPicture = u.lastPicture;
   // The unit's tasks so far, so a leader spawned mid-life (after a handoff or a crash) starts from what its unit already did.

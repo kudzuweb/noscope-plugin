@@ -142,7 +142,7 @@ else if (mode === "plan") {
   for (const u of p.createUnits ?? []) {
     const id = nextId(state, state.units, "u"); unitIds.set(u.ref, id);
     const cfg = u.config ? (state.configs ?? []).find((c) => c.name === u.config) : null;
-    const unit = { id, parentId: unitIds.get(u.parent) ?? u.parent, type: u.type ?? "base", config: u.config ?? null, objective: u.objective, scope: u.scope ?? null, leader: u.leader ?? cfg?.leader, equipment: u.equipment ?? cfg?.equipment ?? [], bashAllowlist: u.bashAllowlist ?? cfg?.bashAllowlist ?? [], role: u.role ?? cfg?.role ?? null, status: "active", revisePending: false, sessionId: null };
+    const unit = { id, parentId: unitIds.get(u.parent) ?? u.parent, type: u.type ?? "base", config: u.config ?? null, objective: u.objective, scope: u.scope ?? null, leader: u.leader ?? cfg?.leader, resourcesAssigned: u.resourcesAssigned ?? cfg?.resourcesAssigned ?? [], bashAllowlist: u.bashAllowlist ?? cfg?.bashAllowlist ?? [], role: u.role ?? cfg?.role ?? null, status: "active", revisePending: false, sessionId: null };
     state.units.push(unit);
     // A configured leader model overrides the plan's; "smallest" leaves the plan's choice.
     const fixedLeader = resolveModel("leader", runConfig(statePath));
@@ -361,11 +361,11 @@ else if (mode === "rejected") {
 }
 else if (mode === "config") {
   const name = a; const u = state.units.find((x) => x.id === b); if (!name || !u) { console.error("config needs <name> <unit-id>"); process.exit(2); }
-  const form = { name, type: u.type ?? "base", leader: u.leader, equipment: u.equipment ?? [], bashAllowlist: u.bashAllowlist ?? [], role: u.role ?? null, savedFrom: { incident: state.incident.id, unit: u.id, objective: u.objective }, at: now() };
+  const form = { name, type: u.type ?? "base", leader: u.leader, resourcesAssigned: u.resourcesAssigned ?? [], bashAllowlist: u.bashAllowlist ?? [], role: u.role ?? null, savedFrom: { incident: state.incident.id, unit: u.id, objective: u.objective }, at: now() };
   state.configs = (state.configs ?? []).filter((c) => c.name !== name); state.configs.push(form);
   const saved = loadSavedConfigs().filter((c) => c.name !== name); saved.push(form); saveSavedConfigs(saved);
   events.push({ type: "config.saved", actor: "ic", name, unitId: u.id });
-  say(`config "${name}" saved from ${u.id} (${form.leader?.model}; ${form.equipment.join(", ") || "no equipment"}); available to every later incident`);
+  say(`config "${name}" saved from ${u.id} (${form.leader?.model}; ${form.resourcesAssigned.join(", ") || "no resources assigned"}); available to every later incident`);
 }
 else if (mode === "budget") {
   // The bound is the human's to set whenever she decides the run should have one, not only when

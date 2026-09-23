@@ -69,7 +69,7 @@ const state = {
   period: { number: 0, objectives: [], priorities: [] },
   briefing: { questions: [] },
   situation: { picture: "", evidence: [], open: [], assessment: { kind: "on_track", why: "nothing observed yet" }, changed: "" },
-  units: [{ id: `${id}-command`, parentId: null, type: "ic", objective: "the incident", leader: { provider: "claude-code", model: resolveModel("ic", config) ?? "smallest" }, equipment: [], bashAllowlist: [], status: "active" }],
+  units: [{ id: `${id}-command`, parentId: null, type: "ic", objective: "the incident", leader: { provider: "claude-code", model: resolveModel("ic", config) ?? "smallest" }, resourcesAssigned: [], bashAllowlist: [], status: "active" }],
   tasks: [], claims: [], evidence: [], reports: [], reassignments: [], questions: [], resourceGaps: [], configs: loadSavedConfigs(),
   resources: example.resources,
 };

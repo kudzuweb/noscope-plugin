@@ -155,7 +155,7 @@
               "kind": "<string, required — The kind's name, as the session names it when it sends a member: letters, digits, - and _>",
               "model": "<string, required — A model the task's provider serves>",
               "tools": [
-                "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes>"
+                "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes>"
               ],
               "prompt": "<string, required — The member's system prompt>",
               "count": "<integer, required — How many members the leader intends to send>",
@@ -215,14 +215,14 @@
             "provider": "<string, required>",
             "model": "<string, required>"
           },
-          "equipment": [
+          "resourcesAssigned": [
             "<array of string, optional — Built-in tool names and external equipment names the unit's tasks may use; a session task under the unit needs no more than this, and every session task runs in a session of its own>"
           ],
           "bashAllowlist": [
             "<array of string, optional — Commands the unit's tasks' read-only Bash may run>"
           ],
           "role": "<string, optional — The role text the leader's session reads in place of the type's own; omit it for the type's>",
-          "config": "<string, optional — The name of a saved unit config (section 8 lists them) whose leader, equipment, bashAllowlist and role fill this unit's form; give only objective and parent beside it, or a field to override the config's>",
+          "config": "<string, optional — The name of a saved unit config (section 8 lists them) whose leader, resourcesAssigned, bashAllowlist and role fill this unit's form; give only objective and parent beside it, or a field to override the config's>",
           "ref": "<string, required — A label the plan uses to refer to this new unit elsewhere>",
           "parent": "<string, required — An existing unit id, or the ref of a unit created in this plan>",
           "type": "<string, optional — The unit's type, whose form these fields fill and whose protocol runs it: base, the led unit, is the only type a plan may create>",
@@ -278,7 +278,7 @@
               "kind": "<string, required — The kind's name, as the session names it when it sends a member: letters, digits, - and _>",
               "model": "<string, required — A model the task's provider serves>",
               "tools": [
-                "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes>"
+                "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes>"
               ],
               "prompt": "<string, required — The member's system prompt>",
               "count": "<integer, required — How many members the leader intends to send>",
@@ -368,7 +368,7 @@
                 "kind": "<string, required — The kind's name, as the session names it when it sends a member: letters, digits, - and _>",
                 "model": "<string, required — A model the task's provider serves>",
                 "tools": [
-                  "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes>"
+                  "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes>"
                 ],
                 "prompt": "<string, required — The member's system prompt>",
                 "count": "<integer, required — How many members the leader intends to send>",
@@ -388,14 +388,14 @@
               "provider": "<string, required>",
               "model": "<string, required>"
             },
-            "equipment": [
+            "resourcesAssigned": [
               "<array of string, optional — Built-in tool names and external equipment names the unit's tasks may use; a session task under the unit needs no more than this, and every session task runs in a session of its own>"
             ],
             "bashAllowlist": [
               "<array of string, optional — Commands the unit's tasks' read-only Bash may run>"
             ],
             "role": "<string, optional — The role text the leader's session reads in place of the type's own; omit it for the type's>",
-            "config": "<string, optional — The name of a saved unit config (section 8 lists them) whose leader, equipment, bashAllowlist and role fill this unit's form; give only objective and parent beside it, or a field to override the config's>",
+            "config": "<string, optional — The name of a saved unit config (section 8 lists them) whose leader, resourcesAssigned, bashAllowlist and role fill this unit's form; give only objective and parent beside it, or a field to override the config's>",
             "ref": "<string, required — A label the plan uses to refer to this new unit elsewhere>",
             "parent": "<string, required — An existing unit id, or the ref of a unit created in this plan>",
             "type": "<string, optional — The unit's type, whose form these fields fill and whose protocol runs it: base, the led unit, is the only type a plan may create>",
@@ -451,7 +451,7 @@
                 "kind": "<string, required — The kind's name, as the session names it when it sends a member: letters, digits, - and _>",
                 "model": "<string, required — A model the task's provider serves>",
                 "tools": [
-                  "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes>"
+                  "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes>"
                 ],
                 "prompt": "<string, required — The member's system prompt>",
                 "count": "<integer, required — How many members the leader intends to send>",
@@ -579,7 +579,7 @@
               "kind": "<string, required — The kind's name, as the session names it when it sends a member: letters, digits, - and _>",
               "model": "<string, required — A model the task's provider serves>",
               "tools": [
-                "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes>"
+                "<array of string, required — Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes>"
               ],
               "prompt": "<string, required — The member's system prompt>",
               "count": "<integer, required — How many members the leader intends to send>",

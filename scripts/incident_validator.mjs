@@ -147,7 +147,7 @@ function checkPlan(p) {
       if (!cfg) reject("Config exists", `${name} names config "${u.config}", which is not saved`);
       else if (cfg.type && u.type && cfg.type !== u.type) reject("Config exists", `${name} names config "${u.config}" of type ${cfg.type} on a ${u.type} unit`);
     } else {
-      for (const f of ["leader", "equipment", "bashAllowlist"]) if (u[f] === undefined) reject("Fields complete", `${name} names no config and leaves ${f} unfilled`);
+      for (const f of ["leader", "resourcesAssigned", "bashAllowlist"]) if (u[f] === undefined) reject("Fields complete", `${name} names no config and leaves ${f} unfilled`);
       if (u.leader && (!u.leader.model || !u.leader.provider)) reject("Model known", `${name}'s leader names no provider and model`);
     }
     if (u.type && u.type !== "base") reject("Type exists", `${name} is of type ${u.type}; a plan may create base units only`);
@@ -374,24 +374,17 @@ function checkResult(r, taskId) {
 }
 
 // ---- The size-up's briefing -----------------------------------------------------------------
-const FIX = /\b(fix|implement|remediat|patch|repair|correct the|change the code|add (a|the))\b/i;
-const INTENDED = /\b(intended|should (it|the|deletion|focus|we|this)|expected behavior|desired behavior)\b/i;
-const DIAGNOSIS = /^\s*(determine|identify|explain|find|why|what|where|how|which|is|does|investigate|diagnose)\b/i;
+// The briefing is a proposal the Incident Commander weighs and is not bound by, so nothing here
+// judges its content: no required fields and no scoping to the incident's kind. What remains is
+// not a judgment but a data contract. incident_apply.mjs copies these model names onto run.json
+// wherever the human configured a seat as `smallest`, and a name the provider does not serve
+// reaches a spawner that fails without saying why.
 function checkBriefing(b) {
-  for (const f of ["kind", "dominantProblem"]) if (typeof b[f] !== "string" || b[f] === "") reject("Fields complete", `the briefing has no ${f}`);
-  if (!Array.isArray(b.initialObjectives) || b.initialObjectives.length === 0) reject("Fields complete", "the briefing sketches no initial objective");
-  for (const f of ["obviouslyNeeded", "initialOrganization", "questionsForHuman", "hazards"]) if (!Array.isArray(b[f])) reject("Fields complete", `the briefing has no ${f} list`);
-  (b.obviouslyNeeded ?? []).forEach((n, i) => { if (n.checked && !n.finding) reject("Fields complete", `need #${i + 1} ("${String(n.what ?? "").slice(0, 50)}") is marked checked with no finding`); });
-  for (const seat of ["planner", "leader"]) { const m = b.seatModels?.[seat]; if (m && (!m.model || !m.why)) reject("Fields complete", `seatModels.${seat} needs model and why`); if (m?.model && !KNOWN_MODELS.some((k) => String(m.model).includes(k))) reject("Model known", `seatModels.${seat} names ${m.model}; the provider serves ${KNOWN_MODELS.join(", ")}`); }
-  if (b.incomingCommander?.model && !KNOWN_MODELS.some((k) => String(b.incomingCommander.model).includes(k))) reject("Model known", `incomingCommander names ${b.incomingCommander.model}; the provider serves ${KNOWN_MODELS.join(", ")}`);
-  if (!b.incomingCommander?.model || !b.incomingCommander?.provider || !b.incomingCommander?.why) reject("Fields complete", "incomingCommander names no provider, model and why");
-  const objective = state.incident?.objective ?? "";
-  const diagnosis = /diagnos/i.test(b.kind ?? "") || DIAGNOSIS.test(objective);
-  if (diagnosis) {
-    (b.initialObjectives ?? []).forEach((o, i) => { if (FIX.test(o)) reject("Scoped to the kind", `initial objective #${i + 1} proposes a fix on a diagnosis: "${o.slice(0, 80)}"`); });
-    (b.initialOrganization ?? []).forEach((u, i) => { if (FIX.test(u)) reject("Scoped to the kind", `unit #${i + 1} is a fix unit on a diagnosis: "${u.slice(0, 80)}"`); });
-    (b.questionsForHuman ?? []).forEach((q, i) => { if (INTENDED.test(q)) reject("Scoped to the kind", `question #${i + 1} asks about intended behavior on a diagnosis: "${q.slice(0, 80)}"`); });
+  for (const seat of ["planner", "leader"]) {
+    const m = b.seatModels?.[seat];
+    if (m?.model && !KNOWN_MODELS.some((k) => String(m.model).includes(k))) reject("Model known", `seatModels.${seat} names ${m.model}; the provider serves ${KNOWN_MODELS.join(", ")}`);
   }
+  if (b.incomingCommander?.model && !KNOWN_MODELS.some((k) => String(b.incomingCommander.model).includes(k))) reject("Model known", `incomingCommander names ${b.incomingCommander.model}; the provider serves ${KNOWN_MODELS.join(", ")}`);
 }
 
 // ---- The IC's review of a draft ---------------------------------------------------------------
@@ -446,7 +439,7 @@ function checkBrief(b, kind, id) {
     const unit = unitById.get(id ?? "");
     if (!unit) { reject("Brief complete", `"${id}" is no unit; pass the unit id`); return; }
     need(["objective", "unit", "hierarchy"], "a leader's orientation");
-    for (const k of ["id", "objective", "equipment", "bashAllowlist"]) if (!(k in (b.unit ?? {}))) reject("Brief complete", `the orientation's unit lacks "${k}"`);
+    for (const k of ["id", "objective", "resourcesAssigned", "bashAllowlist"]) if (!(k in (b.unit ?? {}))) reject("Brief complete", `the orientation's unit lacks "${k}"`);
     if (b.unit?.id !== unit.id) reject("Brief complete", `the orientation is for unit ${b.unit?.id}, not ${unit.id}`);
     if (b.reassignment) { const r = (state.reassignments ?? []).find((x) => x.id === b.reassignment.id); if (!r) reject("Brief complete", `the orientation names reassignment ${b.reassignment.id}, which does not exist`); for (const c of b.reassignment.claims ?? []) if (!claimIds.has(c.id ?? c)) reject("Brief complete", `the reassignment carries claim ${c.id ?? c}, which does not exist`); }
     noPicture(b, "a leader's orientation");

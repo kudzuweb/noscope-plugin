@@ -91,6 +91,7 @@
       "| task | One assignment, owned by one unit, bound to one resource, with an objective, scope, inputs, expected output, completion criteria and required evidence. |",
       "| resource | The assignable thing. Its kind says what it is: equipment runs in process and always answers the same way, personnel is a session that judges. The model and time bound a task gives it are its type. |",
       "| equipment | The primitive a resource uses: a function, a tool, a server, a browser. Never assigned on its own. |",
+      "| resourcesAssigned | The resources a unit's tasks may draw on, named on the unit: built-in tool names and external equipment names. The leader decides how to spend them. |",
       "| subagent | A session spawned inside another and recorded with it. |",
       "| strike team | Several subagents of one kind and model on one task. No kind exists by default: whoever declares it chooses the kind, model, tools and count, and says why. |",
       "| task force | A team of subagents of mixed kinds, sent for one mission. |",

@@ -272,7 +272,7 @@ is what happened, the situation is what you think, and the next report settles i
 
 | Record | Contents |
 |---|---|
-| `incident.json`, its keys | `incident` (id, objective, constraints, priorities, status, working directory, budget, spent); `period` (number, objectives, priorities); `briefing` (the size-up's proposed questions, for the first turn); `situation`; `units` (id, parent, type, objective, leader model, equipment, allowlist, status, last verdict, whether a revise is pending); `tasks` (id, unit, resource, objective, inputs, expected output, completion criteria, evidence required, dependencies, evidence read, what it settles, model, budget, status, and when it ended, its result); `claims`; `evidence` (task id, resource, inputs, a count); `reports` (each awaiting a verdict until it has one); `reassignments` (open, taken or dropped); `questions`; `configs`; `resources` (each with its kind — `equipment`, which runs in process, or `personnel`, a session that judges — and which inputs are paths). |
+| `incident.json`, its keys | `incident` (id, objective, constraints, priorities, status, working directory, budget, spent); `period` (number, objectives, priorities); `briefing` (the size-up's proposed questions, for the first turn); `situation`; `units` (id, parent, type, objective, leader model, resourcesAssigned, allowlist, status, last verdict, whether a revise is pending); `tasks` (id, unit, resource, objective, inputs, expected output, completion criteria, evidence required, dependencies, evidence read, what it settles, model, budget, status, and when it ended, its result); `claims`; `evidence` (task id, resource, inputs, a count); `reports` (each awaiting a verdict until it has one); `reassignments` (open, taken or dropped); `questions`; `configs`; `resources` (each with its kind — `equipment`, which runs in process, or `personnel`, a session that judges — and which inputs are paths). |
 | Your situation | `picture` (what the incident now believes, in prose), `evidence` (claims for and against, by id), `open` (what is not yet known, each with what would settle it; give each an id when you apply the turn), `assessment` (`on_track`, `priors_updated` or `tactics_change`, with a why; `tactics_change` tells the planner to redraw the units rather than extend them), `changed`. |
 | A claim | Subject, predicate, object; basis `observed` or `inferred`; confidence 0 to 1; provenance (the task and session that asserted it, and the evidence it cites). A claim citing attached evidence keeps its basis; one citing nothing attached is `inferred`. Only a session asserts claims; you never turn a command's output into one. |
 | Evidence | A deterministic task's output, kept whole under its task id, attached to a session's brief when the task names it, shown everywhere else as a count with the id. |
@@ -389,7 +389,7 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
   - `strikeTeam` (array of objects, optional): The subagent kinds the session running this task may send, each with its model, tools, prompt, count and why; more than one kind is a task force. No kind exists unless declared here, by whoever defines the task
     - `kind` (string, required): The kind's name, as the session names it when it sends a member: letters, digits, - and _
     - `model` (string, required): A model the task's provider serves
-    - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes
+    - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes
     - `prompt` (string, required): The member's system prompt
     - `count` (integer, required): How many members the leader intends to send
     - `why` (string, required): Why this team, this shape and this count
@@ -432,10 +432,10 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
   - `leader` (object, optional): The provider and model of the unit's leader session, which directs the unit's tasks, runs none of them and holds no tools, and reports against its objective
     - `provider` (string, required)
     - `model` (string, required)
-  - `equipment` (array of string, optional): Built-in tool names and external equipment names the unit's tasks may use; a session task under the unit needs no more than this, and every session task runs in a session of its own
+  - `resourcesAssigned` (array of string, optional): Built-in tool names and external equipment names the unit's tasks may use; a session task under the unit needs no more than this, and every session task runs in a session of its own
   - `bashAllowlist` (array of string, optional): Commands the unit's tasks' read-only Bash may run
   - `role` (string, optional): The role text the leader's session reads in place of the type's own; omit it for the type's
-  - `config` (string, optional): The name of a saved unit config (section 8 lists them) whose leader, equipment, bashAllowlist and role fill this unit's form; give only objective and parent beside it, or a field to override the config's
+  - `config` (string, optional): The name of a saved unit config (section 8 lists them) whose leader, resourcesAssigned, bashAllowlist and role fill this unit's form; give only objective and parent beside it, or a field to override the config's
   - `ref` (string, required): A label the plan uses to refer to this new unit elsewhere
   - `parent` (string, required): An existing unit id, or the ref of a unit created in this plan
   - `type` (string, optional): The unit's type, whose form these fields fill and whose protocol runs it: base, the led unit, is the only type a plan may create
@@ -473,7 +473,7 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
   - `strikeTeam` (array of objects, optional): The subagent kinds the session running this task may send, each with its model, tools, prompt, count and why; more than one kind is a task force. No kind exists unless declared here, by whoever defines the task
     - `kind` (string, required): The kind's name, as the session names it when it sends a member: letters, digits, - and _
     - `model` (string, required): A model the task's provider serves
-    - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes
+    - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes
     - `prompt` (string, required): The member's system prompt
     - `count` (integer, required): How many members the leader intends to send
     - `why` (string, required): Why this team, this shape and this count
@@ -531,7 +531,7 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
     - `strikeTeam` (array of objects, optional): The subagent kinds the session running this task may send, each with its model, tools, prompt, count and why; more than one kind is a task force. No kind exists unless declared here, by whoever defines the task
       - `kind` (string, required): The kind's name, as the session names it when it sends a member: letters, digits, - and _
       - `model` (string, required): A model the task's provider serves
-      - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes
+      - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes
       - `prompt` (string, required): The member's system prompt
       - `count` (integer, required): How many members the leader intends to send
       - `why` (string, required): Why this team, this shape and this count
@@ -546,10 +546,10 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
     - `leader` (object, optional): The provider and model of the unit's leader session, which directs the unit's tasks, runs none of them and holds no tools, and reports against its objective
       - `provider` (string, required)
       - `model` (string, required)
-    - `equipment` (array of string, optional): Built-in tool names and external equipment names the unit's tasks may use; a session task under the unit needs no more than this, and every session task runs in a session of its own
+    - `resourcesAssigned` (array of string, optional): Built-in tool names and external equipment names the unit's tasks may use; a session task under the unit needs no more than this, and every session task runs in a session of its own
     - `bashAllowlist` (array of string, optional): Commands the unit's tasks' read-only Bash may run
     - `role` (string, optional): The role text the leader's session reads in place of the type's own; omit it for the type's
-    - `config` (string, optional): The name of a saved unit config (section 8 lists them) whose leader, equipment, bashAllowlist and role fill this unit's form; give only objective and parent beside it, or a field to override the config's
+    - `config` (string, optional): The name of a saved unit config (section 8 lists them) whose leader, resourcesAssigned, bashAllowlist and role fill this unit's form; give only objective and parent beside it, or a field to override the config's
     - `ref` (string, required): A label the plan uses to refer to this new unit elsewhere
     - `parent` (string, required): An existing unit id, or the ref of a unit created in this plan
     - `type` (string, optional): The unit's type, whose form these fields fill and whose protocol runs it: base, the led unit, is the only type a plan may create
@@ -587,7 +587,7 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
     - `strikeTeam` (array of objects, optional): The subagent kinds the session running this task may send, each with its model, tools, prompt, count and why; more than one kind is a task force. No kind exists unless declared here, by whoever defines the task
       - `kind` (string, required): The kind's name, as the session names it when it sends a member: letters, digits, - and _
       - `model` (string, required): A model the task's provider serves
-      - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes
+      - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes
       - `prompt` (string, required): The member's system prompt
       - `count` (integer, required): How many members the leader intends to send
       - `why` (string, required): Why this team, this shape and this count
@@ -661,7 +661,7 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
   - `strikeTeam` (array of objects, optional): The subagent kinds the session running this task may send, each with its model, tools, prompt, count and why; more than one kind is a task force. No kind exists unless declared here, by whoever defines the task
     - `kind` (string, required): The kind's name, as the session names it when it sends a member: letters, digits, - and _
     - `model` (string, required): A model the task's provider serves
-    - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob, Bash (under the session's read-only allowlist); nothing that writes
+    - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes
     - `prompt` (string, required): The member's system prompt
     - `count` (integer, required): How many members the leader intends to send
     - `why` (string, required): Why this team, this shape and this count
@@ -816,7 +816,7 @@ The messages a seat receives are JSON you assemble from `incident.json` and `log
 | Your own briefing | You, every turn | `change` (since your last turn: `reports`, each with its `situation` and the work beneath it as `work`, one ending per task with its `claims` by id, basis and confidence or its `evidence` as a count, a failure's `reason` and what it `cancelled`, an insufficiency's `needed`; `commandTasks` that ended; `answers`; `refusals`; `rejections`; `cancelled`), `incident` (the keys of `incident.json` whose value changed since your last turn; the whole file on a fresh session), and `unchanged` (the keys omitted). Tool calls are on the `call` events in the log, for analysis after the run, and in no brief. |
 | The planner's ask | The planner | `incident.json` whole, `rules` (the checklist's table), `sinceLastPlan` (tasks completed, tasks insufficient or failed, and reports since the last plan was applied, as the TypeScript runtime's sections 4 to 6), `returns` (the `ActionPlan` fields), `models` and `seatModel`, and the ask to return an `ActionPlan` that works the open items under `situation.open` and holds to the rules, reading nothing but the brief. |
 | The review ask | You | The valid draft with its tasks numbered `#N (ref)`, the validator's `WARN` lines, the statement that every rule holds, and the four substance questions; answer as a `ReviewTurn`. |
-| A leader's orientation | A unit leader, first call | `objective` (the incident's), `unit` (`id`, `objective`, `equipment`, `bashAllowlist`), `hierarchy` (parent, siblings, children), `reassignment` when it takes one (`id`, the predecessor's `objective`, `instructions`, `claims` by id with subject, predicate, basis and confidence), `lastPicture` when it has reported before, `tasks` (every task of the unit so far: an ended one as its ending line, an open one as id, resource, status and objective), so a leader spawned mid-life starts from what its unit already did. Never your `situation`. |
+| A leader's orientation | A unit leader, first call | `objective` (the incident's), `unit` (`id`, `objective`, `resourcesAssigned`, `bashAllowlist`), `hierarchy` (parent, siblings, children), `reassignment` when it takes one (`id`, the predecessor's `objective`, `instructions`, `claims` by id with subject, predicate, basis and confidence), `lastPicture` when it has reported before, `tasks` (every task of the unit so far: an ended one as its ending line, an open one as id, resource, status and objective), so a leader spawned mid-life starts from what its unit already did. Never your `situation`. |
 | A leader's turn prompt | A unit leader, on a decision | `unheard` (each ending as `taskId`, `resource`, `status`, and for a completed task `summary` clipped and `claims` as id, subject, predicate, basis, confidence, or for a deterministic task `evidence` as a count; for a failure `reason` and `cancelled`; for an insufficiency `needed`), `refused` (its last assignments the validator rejected, with reasons), `revise` when one is due (`instructions`, `why`, the `report` reviewed, `periodObjectives`), `ready` and `running` task ids, and the ask (assign, consult or report as a `LeaderTurn`). |
 | A task brief | A task session | `objective` (the incident's), `unit` (`id`, `objective`), `evidence` (`claims` named in `evidenceFrom.claims` in full; `results` of the tasks named in `evidenceFrom.tasks` in full), and the task's `objective`, `inputs`, `expectedOutput`, `completionCriteria`, `evidenceRequired`, `instructions`. Never your `situation`. |
 

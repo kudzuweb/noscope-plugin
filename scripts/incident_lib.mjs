@@ -15,6 +15,12 @@ import { dirname, join, resolve } from "node:path";
 // `if (x && !x)`, which is silently false and leaves the shim inert (seen 2026-09-22, in the
 // very commit that introduced it). Fragments make this function survive the next sweep.
 const OLD = { inv: "capabil" + "ities", gap: "capabil" + "ityRequests", one: "capabil" + "ity" };
+function renameAssignedResources(o) {
+  if (o && typeof o === "object" && o.equipment !== undefined && o.resourcesAssigned === undefined) {
+    o.resourcesAssigned = o.equipment;
+    delete o.equipment;
+  }
+}
 function readForward(state) {
   if (state[OLD.inv] && !state.resources) { state.resources = state[OLD.inv]; delete state[OLD.inv]; }
   if (state[OLD.gap] && !state.resourceGaps) { state.resourceGaps = state[OLD.gap]; delete state[OLD.gap]; }
@@ -23,6 +29,10 @@ function readForward(state) {
       if (item[OLD.one] !== undefined && item.resource === undefined) { item.resource = item[OLD.one]; delete item[OLD.one]; }
     }
   }
+  // A unit's assigned resources were called `equipment`, which collided with the resource kind
+  // of the same name. Records written before the rename still carry the old key.
+  (state.units ?? []).forEach(renameAssignedResources);
+  (state.configs ?? []).forEach(renameAssignedResources);
   // A resource's kind was a boolean before it was an axis: `deterministic: true` is equipment,
   // false is personnel.
   for (const r of Object.values(state.resources ?? {})) {
@@ -185,7 +195,7 @@ export function currentRunFolder(cwd = process.cwd()) {
 }
 /** The saved unit configs shared across incidents (`incident_apply.mjs config` writes them). */
 export function loadSavedConfigs() {
-  try { return JSON.parse(readFileSync(CONFIGS_PATH, "utf8")); } catch { return []; }
+  try { const list = JSON.parse(readFileSync(CONFIGS_PATH, "utf8")); list.forEach(renameAssignedResources); return list; } catch { return []; }
 }
 export function saveSavedConfigs(list) {
   mkdirSync(NOSCOPE_HOME, { recursive: true });
