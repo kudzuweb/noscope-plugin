@@ -397,7 +397,7 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
     - `kind` (string, required): The kind's name, as the session names it when it sends a member: letters, digits, - and _
     - `model` (string, required): A model the task's provider serves
     - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes
-    - `prompt` (string, required): The member's system prompt
+    - `prompt` (string, required): The member's system prompt. It says which of the task's reserved files the member may write, and that a member needing any other file stops and tells the seat that sent it rather than reserving anything itself
     - `count` (integer, required): How many members the leader intends to send
     - `why` (string, required): Why this team, this shape and this count
 - `questionsForHuman` (array of string, required)
@@ -488,7 +488,7 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
     - `kind` (string, required): The kind's name, as the session names it when it sends a member: letters, digits, - and _
     - `model` (string, required): A model the task's provider serves
     - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes
-    - `prompt` (string, required): The member's system prompt
+    - `prompt` (string, required): The member's system prompt. It says which of the task's reserved files the member may write, and that a member needing any other file stops and tells the seat that sent it rather than reserving anything itself
     - `count` (integer, required): How many members the leader intends to send
     - `why` (string, required): Why this team, this shape and this count
 - `cancelTasks` (array of string, required)
@@ -553,7 +553,7 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
       - `kind` (string, required): The kind's name, as the session names it when it sends a member: letters, digits, - and _
       - `model` (string, required): A model the task's provider serves
       - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes
-      - `prompt` (string, required): The member's system prompt
+      - `prompt` (string, required): The member's system prompt. It says which of the task's reserved files the member may write, and that a member needing any other file stops and tells the seat that sent it rather than reserving anything itself
       - `count` (integer, required): How many members the leader intends to send
       - `why` (string, required): Why this team, this shape and this count
   - `why` (string, required): Why this edit, one sentence
@@ -616,7 +616,7 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
       - `kind` (string, required): The kind's name, as the session names it when it sends a member: letters, digits, - and _
       - `model` (string, required): A model the task's provider serves
       - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes
-      - `prompt` (string, required): The member's system prompt
+      - `prompt` (string, required): The member's system prompt. It says which of the task's reserved files the member may write, and that a member needing any other file stops and tells the seat that sent it rather than reserving anything itself
       - `count` (integer, required): How many members the leader intends to send
       - `why` (string, required): Why this team, this shape and this count
   - `cancelTasks` (array of string, required)
@@ -697,7 +697,7 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
     - `kind` (string, required): The kind's name, as the session names it when it sends a member: letters, digits, - and _
     - `model` (string, required): A model the task's provider serves
     - `tools` (array of string, required): Built-in tool names a member may use: Read, Grep, Glob and Bash under the session's allowlist, and the tools that write where the task's resource is one that writes
-    - `prompt` (string, required): The member's system prompt
+    - `prompt` (string, required): The member's system prompt. It says which of the task's reserved files the member may write, and that a member needing any other file stops and tells the seat that sent it rather than reserving anything itself
     - `count` (integer, required): How many members the leader intends to send
     - `why` (string, required): Why this team, this shape and this count
 - `consult` (array of string, optional): Task ids of your unit, or refs of tasks in assignTasks on this turn, whose ending you want to be called on however it ends. A completed task you have not named here starts what depends on it without you and reaches you on your next turn; a failed or insufficient one calls you regardless. Name a task once; the flag holds until it ends
