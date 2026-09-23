@@ -550,6 +550,16 @@ grep -q "WHAT TO FIX" "$T/audit.txt" || fail "the audit printed no findings sect
 grep -q "keep their body in the record" "$T/audit.txt" && fail "the audit says tasks keep their body, after 0.20.0 made them a line"
 grep -q "left no line saying what happened" "$T/audit.txt" && fail "the audit says a task left no summary, which the validator now requires"
 node "$S/incident_audit.mjs" /nonexistent >/dev/null 2>&1 && fail "the audit ran on a folder with no incident.json"
+# The metrics object is what the tables are drawn from, and what --record keeps.
+node "$S/incident_audit.mjs" "$F" --json > "$T/metrics.json" || fail "the audit emitted no metrics object"
+node -e 'const m=require(process.argv[1]);const need=["run","shape","bytes","stateSections","tokens","seats","checks","findings"];const miss=need.filter(k=>!(k in m));if(miss.length){console.error("missing: "+miss.join(", "));process.exit(1)}' "$T/metrics.json" || fail "the metrics object is missing a section"
+node "$S/incident_audit.mjs" "$F" --record >/dev/null || fail "the audit could not record"
+REC="$T/incidents/metrics.jsonl"
+[ -f "$REC" ] || fail "no metrics.jsonl was written beside the projects"
+[ "$(wc -l < "$REC" | tr -d " ")" = "1" ] || fail "recording one run wrote more than one line"
+node "$S/incident_audit.mjs" "$F" --record >/dev/null
+[ "$(wc -l < "$REC" | tr -d " ")" = "1" ] || fail "re-auditing the same run appended a second line instead of replacing it"
+node "$S/incident_audit.mjs" --compare "$T/incidents" | grep -q "recorded run" || fail "the recorded runs do not compare"
 
 step "review"
 node "$S/incident_review.mjs" "$F/incident.json" | head -3

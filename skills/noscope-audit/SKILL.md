@@ -12,8 +12,19 @@ where the bytes and the tokens went, and which of them went twice. Read-only: it
 folder and writes nothing.
 
 ```
-node ${CLAUDE_PLUGIN_ROOT}/scripts/incident_audit.mjs <run folder>
+node ${CLAUDE_PLUGIN_ROOT}/scripts/incident_audit.mjs <run folder> --record
+node ${CLAUDE_PLUGIN_ROOT}/scripts/incident_audit.mjs --compare <incidents dir>
 ```
+
+`--record` keeps the run's metrics as one line in `<incidents dir>/metrics.jsonl`, replacing that
+run's line rather than adding a second, so `--compare` puts every run measured so far in one
+table. Always record: a run folder can be deleted, and the line outlives it.
+
+Every number is measured. The token figures come from each session's own transcript, summed by
+the Stop hook through `usageOfTranscript`, so they are the harness's accounting. The byte figures
+are file sizes. Ratios and percentages are computed by the tool. **Do not recompute, estimate or
+round any of them, and do not add a finding the tool did not print** — the checks are fixed, and
+a number you worked out yourself is not comparable with the ones already recorded.
 
 The run folder is `<incidentsDir>/<project>/<id>`. Without one, `node
 ${CLAUDE_PLUGIN_ROOT}/scripts/incident_current.mjs` prints the incident open in this directory.
@@ -41,3 +52,8 @@ Never report a finding the tool did not print, and never soften one — the numb
 from the record, and the arithmetic is the tool's, not yours.
 
 If the run is clean, say so in one line rather than finding something to say.
+
+To compare against earlier runs, run `--compare` and read the table. A run that is larger or
+dearer than an earlier one is not worse by itself — a four-period incident costs more than a
+two-period one — so compare the ratios, `in/out` and `cache %` and the state size, which say how
+much a seat was handed per token it wrote rather than how much work the run did.

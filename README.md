@@ -100,7 +100,7 @@ it at every turn of its own. Nothing is written into the repository the incident
 | `/noscope-lead <run folder> <unit-id>` | The first prompt for a session that owns one slice; the launcher issues it, you never type it. |
 | `/noscope-handoff` | Pass command to a fresh session; the compaction guard orders it when context runs high. |
 | `/noscope-install` | Once per machine, after installing the plugin. |
-| `/noscope-audit <run folder>` | What a finished run cost and what it wasted: where the bytes went, what the state carries, tokens each seat was handed against what it wrote, and a findings list with numbers. Read-only. |
+| `/noscope-audit <run folder>` | What a finished run cost and what it wasted, in tables: where the bytes went, what the state carries, tokens each seat was handed against what it wrote, and the checks that fired. `--record` keeps the run's metrics as a line in `<incidentsDir>/metrics.jsonl`; `--compare` puts every recorded run in one table. Reads the record and writes only that line. |
 
 To bound a run: it is unbounded unless you say otherwise, and `node ${CLAUDE_PLUGIN_ROOT}/scripts/incident_apply.mjs budget <run folder>/incident.json <tokens|seconds> <n|none>` sets, raises or lifts a bound at any point, including while it is running. Once a bound is spent nothing new starts and the directing session declares an outcome or waits for you to raise it. `--budget-tokens` and `--budget-seconds` on `incident_init.mjs` do the same at the start.
 
