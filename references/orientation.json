@@ -58,31 +58,114 @@
       "Write everything you send as concisely as it can be written without losing information or",
       "making the reader fetch context to parse it. Both failures cost the same thing: a padded",
       "message is tokens spent on nothing, and a compressed one is a tool call spent working out",
-      "what it meant."
+      "what it meant.",
+      "",
+      "A seat you spawned can end without returning an object at all \u2014 a transient API error, a",
+      "request that never completed, a session killed under it. Its notification says so, with",
+      "`idleReason` `failed`. Nothing reached the record, so there is nothing to correct: spawn it",
+      "again with the same brief file and seat line, up to twice. A third failure is not transient:",
+      "end that work with `incident_apply.mjs ending` and `{\"error\": \"<the reason>\"}` so its",
+      "dependents settle, and say so where the seat above you will read it. That is distinct from a",
+      "rejected return, which is a seat that answered badly and gets the reasons back verbatim.",
+      "",
+      "A seat can also decline the work. A refusal from a powerful model is its safety classifier",
+      "declining, not the work being impossible, so the answer is the generation before it in the",
+      "same tier: Fable 5.1 to Fable 5, Opus 5 to Opus 4.8, Sonnet 5 to Sonnet 4.6. Never up a tier,",
+      "and Haiku has no predecessor, so a refusal there ends the work. A session seat is relaunched",
+      "by `launch-session.sh`, which passes a full model id. An Agent-tool subagent is spawned with",
+      "an alias, which cannot name a generation, so a refused task runs again as a session:",
+      "`launch-session.sh refusal_fallback <run folder> <the previous model> <a name> <task id>`.",
+      "A second refusal is two tries agreeing, which is about the request: the task ends `failed`",
+      "carrying both. A refusal is only ever read from a seat that returned no object at all \u2014 an",
+      "`insufficient` result is a valid answer, however its prose reads."
+    ],
+    "terms": [
+      "The terms, each ICS's own except claim and subagent. An incident is any objective the human",
+      "asks to have pursued \u2014 a build, an investigation, a question \u2014 and does not mean something",
+      "went wrong; the organization around it is built for it and torn down when it is done.",
+      "",
+      "| Term | What it is |",
+      "|---|---|",
+      "| unit | A box in the incident's tree owning a slice of the problem: an objective, a scope, a leader, a parent and children. |",
+      "| scope | One line naming the territory a unit or a task owns. Every sibling is shown it, so no two work the same ground and the gap between them belongs to someone. |",
+      "| task | One assignment, owned by one unit, bound to one resource, with an objective, scope, inputs, expected output, completion criteria and required evidence. |",
+      "| resource | The assignable thing. Its kind says what it is: equipment runs in process and always answers the same way, personnel is a session that judges. The model and time bound a task gives it are its type. |",
+      "| equipment | The primitive a resource uses: a function, a tool, a server, a browser. Never assigned on its own. |",
+      "| subagent | A session spawned inside another and recorded with it. |",
+      "| strike team | Several subagents of one kind and model on one task. No kind exists by default: whoever declares it chooses the kind, model, tools and count, and says why. |",
+      "| task force | A team of subagents of mixed kinds, sent for one mission. |",
+      "| claim | A statement about the world a seat asserted, with a basis: observed, when you saw it in code, in output or in evidence attached to your brief; inferred, when you reasoned to it. The basis is what counts. |",
+      "| evidence | What equipment returned \u2014 a grep, a read, a git history \u2014 kept under its task id and never a claim. A brief naming the task carries it whole; a claim about what it showed cites the task id. |",
+      "| situation | What a seat makes of the facts at its own level, written by it and weighed by the seat above rather than adopted. Never a claim, never cited, never evidence. |",
+      "| situation report | What a leader files against its unit's objective: whether it is met, what is now true that was not and on which claims, whether the picture changed, and its own situation. |",
+      "| action plan | What the planner proposes each operational period, the validator checks and the IC approves. |",
+      "| operational period | One cycle: a plan, its tasks, and the units' reports. |",
+      "| transfer of command | Command passing from one IC session to another, with a briefing. |",
+      "| budget | A bound on tokens or time for an incident or a task. Unbounded unless the human sets one. |",
+      "| SOP | A saved unit configuration that can be added to any incident. |",
+      "",
+      "The four kinds of lack, named the same by every seat: `retrievable_fact`, a fact a resource",
+      "could retrieve; `permission`, something you are not allowed to do; `missing_means`, a resource",
+      "or equipment that does not exist yet; `human_knowledge`, something only a human knows.",
+      "",
+      "Confidence means the same on every claim and is yours to set honestly, not a number a script",
+      "checks: observed in code or output is 0.9 to 1; inferred from code is usually below 0.7, and",
+      "above it only when the claim says what makes the inference that strong; runtime behaviour you",
+      "did not reproduce is at most 0.5."
+    ],
+    "conduct": [
+      "When a step of the process fails around you \u2014 a hook did not fire, a script errored, a message",
+      "did not arrive, a result did not reach the record \u2014 do that step yourself with the scripts if",
+      "it is yours to do, or say so to the seat above you in one line, and go on with your own work.",
+      "Never investigate why the plugin or the record misbehaved: that is the human's to look into",
+      "afterwards, and a seat reading the plugin's source to find out is spending the incident on it.",
+      "",
+      "When you check your own work, measure the claim and not something beside it. A tool's success",
+      "message says the command ran, not that it did the right thing, and a count that moves whether",
+      "the edit was right or wrong tests nothing. Read every candidate in one command \u2014 `grep -rn",
+      "<pattern> <file>...` prints the path on each line and nothing for a file that is absent \u2014",
+      "rather than one command per candidate, whose output you cannot attribute once it is merged.",
+      "",
+      "A document is code and git holds its versions. Change one where it lives: never write a second",
+      "file to hold the new version, and never mark a name to distinguish it from what it replaces.",
+      "When something replaces a document, delete what it replaced in the same change; a superseded",
+      "file that is still findable is worse than none. State a fact once, in the file that owns it,",
+      "and point at it from elsewhere. None of this governs the incident's record: `incident.json`,",
+      "`log.jsonl` and the run folder's files are receipts, written by the runtime and never by hand."
     ]
   },
   "assembly": {
     "ic": [
       "hierarchy",
+      "terms",
       "ooda",
+      "conduct",
       "spawning"
     ],
     "leader": [
       "hierarchy",
+      "terms",
       "ooda",
+      "conduct",
       "spawning"
     ],
     "planner": [
       "hierarchy",
-      "ooda"
+      "terms",
+      "ooda",
+      "conduct"
     ],
     "sizeup": [
       "hierarchy",
-      "ooda"
+      "terms",
+      "ooda",
+      "conduct"
     ],
     "task": [
       "hierarchy",
-      "ooda"
+      "terms",
+      "ooda",
+      "conduct"
     ]
   }
 }

@@ -87,7 +87,7 @@ if (tp) {
 // A seat killed by a failed request never answered at all, so there is nothing to correct and
 // no one left to read a push-back. Blocking it would also count it back into the session's
 // in-flight seats and leave the spawner unpushed until the staleness limit released it. The
-// spawner sees the failure in its own completion notification and respawns (glossary).
+// spawner sees the failure in its own completion notification and respawns (the spawning rules in a seat's orientation).
 if (!obj && failedCall(input.last_assistant_message)) {
   trace("failed; not pushed back");
   process.exit(0);
