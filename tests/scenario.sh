@@ -73,6 +73,23 @@ out=$(seat_stop noscope:planner p1 "$GOOD"); expect_silent "$out" planner-good
 [ -f "$F/draft-1.json" ] || fail "draft not saved"
 grep -q '"type":"plan.rejected"' "$F/log.jsonl" || fail "the rejected draft was not logged"
 
+# A session task's inputs are free-form, so a path in one is recognised by its shape. A path that
+# is not there warns and the plan still stands, because the guess can be wrong and a refusal would
+# cost a redraft. A URL in the same field must not be mistaken for one.
+cat > "$T/setinput.js" <<'JS'
+const fs = require("fs");
+const p = JSON.parse(process.argv[2]);
+p.createTasks[1].inputs = { file: process.argv[3] };
+fs.writeFileSync(process.argv[4], JSON.stringify(p));
+JS
+node "$T/setinput.js" "$GOOD" "src/nowhere/gone.ts" "$T/plan-badpath.json"
+OUTP=$(node "$S/incident_validator.mjs" plan "$F/incident.json" "$T/plan-badpath.json" 2>&1; echo "rc=$?")
+case "$OUTP" in *"rc=0"*) ;; *) fail "a missing path on a session task refused the plan; it must only warn (got: $OUTP)";; esac
+case "$OUTP" in *"Paths exist"*) ;; *) fail "a missing path on a session task was not reported at all";; esac
+node "$T/setinput.js" "$GOOD" "http://localhost:1/a/b" "$T/plan-url.json"
+OUTU=$(node "$S/incident_validator.mjs" plan "$F/incident.json" "$T/plan-url.json" 2>&1)
+case "$OUTU" in *"Paths exist"*) fail "a URL input was mistaken for a missing path";; *) ;; esac
+
 step "review: a correct with two patches is applied to the draft deterministically and logged"
 cat > "$F/review-1.json" <<'JSON'
 {"verdict":"correct","patches":[{"kind":"set","task":"i","field":"model","value":"claude-sonnet-5"},{"kind":"set","task":"#1","field":"instructions","value":"Delete a middle comment twice; measure the page and the rail before and after each."}],"rationale":"the reading needs judgment on which site runs; the reproduction needs two trials"}

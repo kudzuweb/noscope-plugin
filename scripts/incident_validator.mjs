@@ -52,6 +52,10 @@ const rootUnit = units.find((u) => u.parentId === null || u.parentId === undefin
 // A resource's kind, in NIMS's sense: equipment runs in process and always answers the same
 // way, personnel is a session that judges. Everything the rules care about follows from it.
 const isEquipment = (resource) => caps[resource]?.kind === "equipment";
+// Whether a free-form input value reads as a repository path rather than prose, a URL, a selector
+// or a pattern. Deliberately narrow: a slash, no scheme, no whitespace, no glob characters.
+const pathShaped = (v) => typeof v === "string" && v.length > 1 && v.length < 300
+  && v.includes("/") && !v.includes("://") && !/\s/.test(v) && !/[*?\[\]]/.test(v);
 const label = (t, i) => (t.ref ? `task ${t.ref}` : `task #${i + 1} ("${String(t.objective ?? "").slice(0, 60)}")`);
 const largeModel = (m) => typeof m === "string" && /opus|fable/i.test(m);
 
@@ -80,6 +84,16 @@ function checkTasks(proposals, { refsInPlan, unitsInPlan, cancelled, rule = "Fie
           const v = t.inputs[key];
           if (typeof v === "string" && !existsSync(resolve(cwd, v)))
             reject("Paths exist", `${name} names ${key} "${v}", which resolves against ${cwd} to nothing that exists`);
+        }
+      }
+      // A session task's inputs are free-form, so which of them is a path can only be read off the
+      // value. That guess is right often enough to be worth making and wrong often enough that it
+      // warns rather than refuses: a wrong refusal costs the planner a redraft, a wrong warning
+      // costs nothing, and a resource that writes will name a file it is about to create.
+      if (!isEquipment(t.resource) && t.inputs) {
+        for (const [key, v] of Object.entries(t.inputs)) {
+          if (pathShaped(v) && !existsSync(resolve(cwd, v)))
+            warn("Paths exist", `${name} names ${key} "${v}", which looks like a path and resolves against ${cwd} to nothing that exists; the seat will have to find it or report the lack`);
         }
       }
     }
