@@ -773,4 +773,18 @@ node "$S/incident_review.mjs" "$F/incident.json" | head -3
 node --input-type=module -e 'const lib=await import(process.argv[1]); const m=lib.loadCurrent(); delete m[process.argv[2]]; lib.saveCurrent(m)' "$S/incident_lib.mjs" "$CWD" || fail "pointer cleanup"
 rm -f "$HOME/.warp/tab_configs/noscope-scenario-leader.toml" "$UP"   # the launcher steps wrote these outside the scratch dir
 rm -f "$SESSIONS/$NOSCOPE_SESSION_ID"                               # and this, if a step left it behind
+# The seat and run registries are machine-wide, like the session markers, so a test run must not
+# leave itself in them. --all would drop these on its next tick anyway; not waiting for that is
+# what keeps a test from showing up in the real failsafe's output in the meantime.
+cat > "$T/unregister.js" <<'JS'
+const fs = require("fs"), os = require("os"), path = require("path");
+const folder = process.argv[2];
+for (const [name, key] of [["workers.json", "folder"], ["watching.json", null]]) {
+  const p = path.join(os.homedir(), ".claude", "noscope", name);
+  let m; try { m = JSON.parse(fs.readFileSync(p, "utf8")); } catch { continue; }
+  const kept = Object.fromEntries(Object.entries(m).filter(([k, v]) => key ? v?.[key] !== folder : k !== folder));
+  if (Object.keys(kept).length !== Object.keys(m).length) fs.writeFileSync(p, JSON.stringify(kept, null, 2) + "\n");
+}
+JS
+node "$T/unregister.js" "$F"
 echo "PASS: run folder $F"

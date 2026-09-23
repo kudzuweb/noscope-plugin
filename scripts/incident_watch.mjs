@@ -16,7 +16,7 @@
 import { existsSync, readFileSync, readdirSync, appendFileSync } from "node:fs";
 import { join, basename } from "node:path";
 import { spawnSync } from "node:child_process";
-import { loadState, loadRun, OPEN_TASK, loadWatching, unwatchRun, workersOf } from "./incident_lib.mjs";
+import { loadState, loadRun, OPEN_TASK, loadWatching, unwatchRun, workersOf, loadWorkers, deregisterWorker } from "./incident_lib.mjs";
 
 const args = process.argv.slice(2);
 const folder = args[0];
@@ -29,6 +29,13 @@ const has = (name) => args.includes(name);
 if (args[0] === "--all") {
   const registered = Object.keys(loadWatching());
   const live = [];
+  // A seat registered against a folder no run is watching any more is a leftover, for the same
+  // reasons a run registration is: a crash, or a record deleted under it. Dropped here so the
+  // registry cannot grow without bound on a machine that runs many incidents.
+  const seats = loadWorkers();
+  for (const [sid, w] of Object.entries(seats)) {
+    if (!w?.folder || !existsSync(join(w.folder, "incident.json"))) deregisterWorker(sid);
+  }
   for (const f of registered) {
     if (!existsSync(join(f, "incident.json"))) { unwatchRun(f); continue; }
     let st; try { st = loadState(join(f, "incident.json")); } catch { continue; }
