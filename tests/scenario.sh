@@ -541,6 +541,16 @@ node "$H/noscope-log-turn.mjs" < "$T/in.json"
 after=$(grep -c '"type":"call"' "$F/log.jsonl")
 [ "$before" = "$after" ] || fail "the turn hook logged into an ended incident: $before -> $after call(s)"
 
+step "the audit reads the run and finds nothing wrong with a clean one"
+node "$S/incident_audit.mjs" "$F" > "$T/audit.txt" || fail "the audit did not run"
+grep -q "WHERE THE BYTES ARE" "$T/audit.txt" || fail "the audit printed no composition"
+grep -q "THE STATE" "$T/audit.txt" || fail "the audit printed no state breakdown"
+grep -q "WHAT TO FIX" "$T/audit.txt" || fail "the audit printed no findings section"
+# This run stores a line per task and a pointer, so the bloat checks must not fire on it.
+grep -q "keep their body in the record" "$T/audit.txt" && fail "the audit says tasks keep their body, after 0.20.0 made them a line"
+grep -q "left no line saying what happened" "$T/audit.txt" && fail "the audit says a task left no summary, which the validator now requires"
+node "$S/incident_audit.mjs" /nonexistent >/dev/null 2>&1 && fail "the audit ran on a folder with no incident.json"
+
 step "review"
 node "$S/incident_review.mjs" "$F/incident.json" | head -3
 node --input-type=module -e 'const lib=await import(process.argv[1]); const m=lib.loadCurrent(); delete m[process.argv[2]]; lib.saveCurrent(m)' "$S/incident_lib.mjs" "$CWD" || fail "pointer cleanup"
