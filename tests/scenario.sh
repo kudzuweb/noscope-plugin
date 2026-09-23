@@ -84,6 +84,28 @@ node "$S/incident_validator.mjs" plan "$F/incident.json" "$F/draft-1.json" >/dev
 grep -q '"type":"plan.reviewed"' "$F/log.jsonl" || fail "review not logged"
 node "$S/incident_apply.mjs" plan "$F/incident.json" "$F/draft-1.json" >/dev/null || fail "plan apply"
 
+step "nothing tells a seat to read a file the plugin has not got"
+cat > "$T/paths.js" <<'JS'
+const fs = require("fs"), path = require("path");
+const root = process.argv[2];
+const bad = [];
+const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => {
+  if (e.name.startsWith(".") || e.name === "archive" || e.name === "node_modules") return [];
+  const p = path.join(d, e.name);
+  return e.isDirectory() ? walk(p) : (/\.(md|mjs|sh|json)$/.test(e.name) ? [p] : []);
+});
+for (const f of walk(root)) {
+  const text = fs.readFileSync(f, "utf8");
+  for (const m of text.matchAll(/\$\{?CLAUDE_PLUGIN_ROOT\}?\/([A-Za-z0-9_./-]+)/g)) {
+    const rel = m[1].replace(/[.,;)`'"]+$/, "");
+    if (!rel.includes(".")) continue;                       // a folder, not a file
+    if (!fs.existsSync(path.join(root, rel))) bad.push(`${path.relative(root, f)} names ${rel}, which does not exist`);
+  }
+}
+if (bad.length) { console.error([...new Set(bad)].join("\n")); process.exit(1); }
+JS
+node "$T/paths.js" "$P" || fail "a prompt or document names a plugin file that is not there"
+
 step "every seat's orientation assembles from one file, and the record can name which"
 for k in ic leader planner sizeup task; do
   node "$S/incident_orient.mjs" $k > "$T/orient-$k.txt" || fail "no orientation assembles for seat kind $k"
