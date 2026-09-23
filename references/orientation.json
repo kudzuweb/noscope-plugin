@@ -92,6 +92,7 @@
       "| resource | The assignable thing. Its kind says what it is: equipment runs in process and always answers the same way, personnel is a session that judges. The model and time bound a task gives it are its type. |",
       "| equipment | The primitive a resource uses: a function, a tool, a server, a browser. Never assigned on its own. |",
       "| resourcesAssigned | The resources a unit's tasks may draw on, named on the unit: built-in tool names and external equipment names. The leader decides how to spend them. |",
+      "| reservation | A file someone is writing, recorded with the worker holding it, so a second worker learns before it starts rather than at a merge. It is a notice and not a lock. |",
       "| subagent | A session spawned inside another and recorded with it. |",
       "| strike team | Several subagents of one kind and model on one task. No kind exists by default: whoever declares it chooses the kind, model, tools and count, and says why. |",
       "| task force | A team of subagents of mixed kinds, sent for one mission. |",
@@ -132,7 +133,17 @@
       "When something replaces a document, delete what it replaced in the same change; a superseded",
       "file that is still findable is worse than none. State a fact once, in the file that owns it,",
       "and point at it from elsewhere. None of this governs the incident's record: `incident.json`,",
-      "`log.jsonl` and the run folder's files are receipts, written by the runtime and never by hand."
+      "`log.jsonl` and the run folder's files are receipts, written by the runtime and never by hand.",
+      "",
+      "Reserve a file before you write it. The files your brief names in `touches` are reserved for",
+      "you when you start, and they are yours until you end. When the work turns out to need a file",
+      "your brief did not name, reserve it first: `node $PLUGIN/scripts/incident_apply.mjs reserve",
+      "<run folder>/incident.json <your id> <path>...`. A file nobody holds becomes yours and you",
+      "carry on \u2014 send the line it prints to the seat it names, because the picture above you is",
+      "wrong until you do, and being told costs that seat nothing. A file another worker holds is",
+      "not reserved and the command exits 3: stop there, send the line it prints, and wait for new",
+      "orders. Never write a file the command refused you; the reservation is how the work of two",
+      "workers stays out of one merge, and writing anyway is the collision it exists to prevent."
     ]
   },
   "assembly": {

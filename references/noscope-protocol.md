@@ -272,7 +272,7 @@ is what happened, the situation is what you think, and the next report settles i
 
 | Record | Contents |
 |---|---|
-| `incident.json`, its keys | `incident` (id, objective, constraints, priorities, status, working directory, budget, spent); `period` (number, objectives, priorities); `briefing` (the size-up's proposed questions, for the first turn); `situation`; `units` (id, parent, type, objective, leader model, resourcesAssigned, allowlist, status, last verdict, whether a revise is pending); `tasks` (id, unit, resource, objective, inputs, expected output, completion criteria, evidence required, dependencies, evidence read, what it settles, model, budget, status, and when it ended, its result); `claims`; `evidence` (task id, resource, inputs, a count); `reports` (each awaiting a verdict until it has one); `reassignments` (open, taken or dropped); `questions`; `configs`; `resources` (each with its kind — `equipment`, which runs in process, or `personnel`, a session that judges — and which inputs are paths). |
+| `incident.json`, its keys | `incident` (id, objective, constraints, priorities, status, working directory, budget, spent); `period` (number, objectives, priorities); `briefing` (the size-up's proposed questions, for the first turn); `situation`; `units` (id, parent, type, objective, leader model, resourcesAssigned, allowlist, status, last verdict, whether a revise is pending); `tasks` (id, unit, resource, objective, inputs, expected output, completion criteria, evidence required, dependencies, evidence read, what it settles, model, budget, status, and when it ended, its result); `claims`; `evidence` (task id, resource, inputs, a count); `reports` (each awaiting a verdict until it has one); `reassignments` (open, taken or dropped); `questions`; `reservations` (a file being written, the worker holding it and that worker's unit); `configs`; `resources` (each with its kind — `equipment`, which runs in process, or `personnel`, a session that judges — and which inputs are paths). |
 | Your situation | `picture` (what the incident now believes, in prose), `evidence` (claims for and against, by id), `open` (what is not yet known, each with what would settle it; give each an id when you apply the turn), `assessment` (`on_track`, `priors_updated` or `tactics_change`, with a why; `tactics_change` tells the planner to redraw the units rather than extend them), `changed`. |
 | A claim | Subject, predicate, object; basis `observed` or `inferred`; confidence 0 to 1; provenance (the task and session that asserted it, and the evidence it cites). A claim citing attached evidence keeps its basis; one citing nothing attached is `inferred`. Only a session asserts claims; you never turn a command's output into one. |
 | Evidence | A deterministic task's output, kept whole under its task id, attached to a session's brief when the task names it, shown everywhere else as a count with the id. |
@@ -378,6 +378,13 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
     Every other task of the same unit is shown this line and told to stay out of it, so write what
     it covers and never what you expect it to find — a scope that leaks the picture makes a seat
     test your hypothesis instead of the evidence.
+  - `touches` (array of string, optional): The files this task expects to write, as paths
+    relative to the repository. Two tasks that write one file are a dependency and not
+    parallel work: name the earlier in the later's `dependsOn`, so the file is worked once at
+    a time and no merge has to reconcile them. A task that finds mid-work it must write a file
+    it did not name here reserves it and carries on when it is free; when another worker holds
+    it the task stops, and its leader gives new orders, or the IC does when the holder belongs
+    to another unit.
   - `settles` (array of string, optional): The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task
   - `instructions` (string, required)
   - `provider` (string or null, required)
@@ -462,6 +469,13 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
     Every other task of the same unit is shown this line and told to stay out of it, so write what
     it covers and never what you expect it to find — a scope that leaks the picture makes a seat
     test your hypothesis instead of the evidence.
+  - `touches` (array of string, optional): The files this task expects to write, as paths
+    relative to the repository. Two tasks that write one file are a dependency and not
+    parallel work: name the earlier in the later's `dependsOn`, so the file is worked once at
+    a time and no merge has to reconcile them. A task that finds mid-work it must write a file
+    it did not name here reserves it and carries on when it is free; when another worker holds
+    it the task stops, and its leader gives new orders, or the IC does when the holder belongs
+    to another unit.
   - `settles` (array of string, optional): The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task
   - `instructions` (string, required)
   - `provider` (string or null, required)
@@ -520,6 +534,13 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
       Every other task of the same unit is shown this line and told to stay out of it, so write what
       it covers and never what you expect it to find — a scope that leaks the picture makes a seat
       test your hypothesis instead of the evidence.
+    - `touches` (array of string, optional): The files this task expects to write, as paths
+      relative to the repository. Two tasks that write one file are a dependency and not
+      parallel work: name the earlier in the later's `dependsOn`, so the file is worked once at
+      a time and no merge has to reconcile them. A task that finds mid-work it must write a file
+      it did not name here reserves it and carries on when it is free; when another worker holds
+      it the task stops, and its leader gives new orders, or the IC does when the holder belongs
+      to another unit.
     - `settles` (array of string, optional): The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task
     - `instructions` (string, required)
     - `provider` (string or null, required)
@@ -576,6 +597,13 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
       Every other task of the same unit is shown this line and told to stay out of it, so write what
       it covers and never what you expect it to find — a scope that leaks the picture makes a seat
       test your hypothesis instead of the evidence.
+    - `touches` (array of string, optional): The files this task expects to write, as paths
+      relative to the repository. Two tasks that write one file are a dependency and not
+      parallel work: name the earlier in the later's `dependsOn`, so the file is worked once at
+      a time and no merge has to reconcile them. A task that finds mid-work it must write a file
+      it did not name here reserves it and carries on when it is free; when another worker holds
+      it the task stops, and its leader gives new orders, or the IC does when the holder belongs
+      to another unit.
     - `settles` (array of string, optional): The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task
     - `instructions` (string, required)
     - `provider` (string or null, required)
@@ -651,6 +679,13 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
   - `evidenceFrom` (object, optional): Claims by id and tasks by id or ref whose content this task needs; the runtime attaches them, so do not copy evidence into inputs
     - `claims` (array of string, optional)
     - `tasks` (array of string, optional)
+  - `touches` (array of string, optional): The files this task expects to write, as paths
+    relative to the repository. Two tasks that write one file are a dependency and not
+    parallel work: name the earlier in the later's `dependsOn`, so the file is worked once at
+    a time and no merge has to reconcile them. A task that finds mid-work it must write a file
+    it did not name here reserves it and carries on when it is free; when another worker holds
+    it the task stops, and you give new orders, or the IC does when the holder belongs to
+    another unit.
   - `instructions` (string, required)
   - `provider` (string or null, required)
   - `model` (string or null, required)

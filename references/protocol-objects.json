@@ -139,6 +139,9 @@
             ]
           },
           "scope": "<string, required — One line naming the territory this task owns, written so a sibling task can tell whose work is whose: the files, the surface or the question it covers. Every other task of the same unit is shown this line and told to stay out of it, so write what it covers and never what you expect it to find — a scope that leaks the picture makes a seat test your hypothesis instead of the evidence.>",
+          "touches": [
+            "<array of string, optional — The files this task expects to write, as paths relative to the repository. Two tasks that write one file are a dependency and not parallel work: name the earlier in the later's `dependsOn`, so the file is worked once at a time and no merge has to reconcile them. A task that finds mid-work it must write a file it did not name here reserves it and carries on when it is free; when another worker holds it the task stops, and its leader gives new orders, or the IC does when the holder belongs to another unit.>"
+          ],
           "settles": [
             "<array of string, optional — The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task>"
           ],
@@ -262,6 +265,9 @@
             ]
           },
           "scope": "<string, required — One line naming the territory this task owns, written so a sibling task can tell whose work is whose: the files, the surface or the question it covers. Every other task of the same unit is shown this line and told to stay out of it, so write what it covers and never what you expect it to find — a scope that leaks the picture makes a seat test your hypothesis instead of the evidence.>",
+          "touches": [
+            "<array of string, optional — The files this task expects to write, as paths relative to the repository. Two tasks that write one file are a dependency and not parallel work: name the earlier in the later's `dependsOn`, so the file is worked once at a time and no merge has to reconcile them. A task that finds mid-work it must write a file it did not name here reserves it and carries on when it is free; when another worker holds it the task stops, and its leader gives new orders, or the IC does when the holder belongs to another unit.>"
+          ],
           "settles": [
             "<array of string, optional — The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task>"
           ],
@@ -352,6 +358,9 @@
               ]
             },
             "scope": "<string, required — One line naming the territory this task owns, written so a sibling task can tell whose work is whose: the files, the surface or the question it covers. Every other task of the same unit is shown this line and told to stay out of it, so write what it covers and never what you expect it to find — a scope that leaks the picture makes a seat test your hypothesis instead of the evidence.>",
+            "touches": [
+              "<array of string, optional — The files this task expects to write, as paths relative to the repository. Two tasks that write one file are a dependency and not parallel work: name the earlier in the later's `dependsOn`, so the file is worked once at a time and no merge has to reconcile them. A task that finds mid-work it must write a file it did not name here reserves it and carries on when it is free; when another worker holds it the task stops, and its leader gives new orders, or the IC does when the holder belongs to another unit.>"
+            ],
             "settles": [
               "<array of string, optional — The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task>"
             ],
@@ -435,6 +444,9 @@
               ]
             },
             "scope": "<string, required — One line naming the territory this task owns, written so a sibling task can tell whose work is whose: the files, the surface or the question it covers. Every other task of the same unit is shown this line and told to stay out of it, so write what it covers and never what you expect it to find — a scope that leaks the picture makes a seat test your hypothesis instead of the evidence.>",
+            "touches": [
+              "<array of string, optional — The files this task expects to write, as paths relative to the repository. Two tasks that write one file are a dependency and not parallel work: name the earlier in the later's `dependsOn`, so the file is worked once at a time and no merge has to reconcile them. A task that finds mid-work it must write a file it did not name here reserves it and carries on when it is free; when another worker holds it the task stops, and its leader gives new orders, or the IC does when the holder belongs to another unit.>"
+            ],
             "settles": [
               "<array of string, optional — The open items of the IC's situation this task settles, by id as the incident file's situation lists them; every open item the IC did not defer is named here by some task>"
             ],
@@ -566,6 +578,9 @@
               "<array of string, optional>"
             ]
           },
+          "touches": [
+            "<array of string, optional — The files this task expects to write, as paths relative to the repository. Two tasks that write one file are a dependency and not parallel work: name the earlier in the later's `dependsOn`, so the file is worked once at a time and no merge has to reconcile them. A task that finds mid-work it must write a file it did not name here reserves it and carries on when it is free; when another worker holds it the task stops, and you give new orders, or the IC does when the holder belongs to another unit.>"
+          ],
           "instructions": "<string, required>",
           "provider": "<string or null, required>",
           "model": "<string or null, required>",

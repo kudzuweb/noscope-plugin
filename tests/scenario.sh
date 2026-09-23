@@ -666,6 +666,30 @@ node "$S/incident_audit.mjs" "$F" --record >/dev/null
 [ "$(wc -l < "$REC" | tr -d " ")" = "1" ] || fail "re-auditing the same run appended a second line instead of replacing it"
 node "$S/incident_audit.mjs" --compare "$T/incidents" | grep -q "recorded run" || fail "the recorded runs do not compare"
 
+step "a file being written is reserved, and a second worker is told rather than left to collide"
+# The two units of this run each still hold a task; reserve against the real record.
+RESV_A=$(node -e 'const s=require(process.argv[1]);const t=s.tasks.find(x=>x.unitId);if(!t){console.error("no task carries a unitId");process.exit(1)}console.log(t.id)' "$F/incident.json") || fail "could not find a task to reserve against"
+RESV_UNIT=$(node -e 'const s=require(process.argv[1]);console.log(s.tasks.find(x=>x.id===process.argv[2]).unitId)' "$F/incident.json" "$RESV_A")
+[ -n "$RESV_UNIT" ] || fail "a task carries no unit id; the reservation code reads the wrong field"
+
+node "$S/incident_apply.mjs" reserve "$F/incident.json" "$RESV_A" src/scroll.ts >/dev/null || fail "a free file could not be reserved"
+node -e 'const s=require(process.argv[1]);const r=(s.reservations||[]).find(x=>x.path==="src/scroll.ts");if(!r||r.by!==process.argv[2]||r.unit!==process.argv[3])process.exit(1)' "$F/incident.json" "$RESV_A" "$RESV_UNIT" || fail "the reservation did not record both its worker and that worker's unit"
+
+# The same worker asking again is not a conflict with itself.
+node "$S/incident_apply.mjs" reserve "$F/incident.json" "$RESV_A" src/scroll.ts >/dev/null || fail "a worker conflicted with its own reservation"
+
+# A second worker is refused the file, nothing is taken from it, and it is told who to tell.
+OUT=$(node "$S/incident_apply.mjs" reserve "$F/incident.json" "$RESV_UNIT" src/scroll.ts src/other.ts; echo "rc=$?")
+case "$OUT" in *"rc=3"*) ;; *) fail "a held file did not refuse the second worker (got: $OUT)";; esac
+case "$OUT" in *"notify:"*) ;; *) fail "a refused reservation did not say who to tell";; esac
+node -e 'const s=require(process.argv[1]);if((s.reservations||[]).some(x=>x.path==="src/other.ts"))process.exit(1)' "$F/incident.json" || fail "a refused reserve still took the files it could have had; it must take none"
+
+# Releasing hands it on.
+node "$S/incident_apply.mjs" release "$F/incident.json" "$RESV_A" src/scroll.ts >/dev/null || fail "a reservation could not be released"
+node "$S/incident_apply.mjs" reserve "$F/incident.json" "$RESV_UNIT" src/scroll.ts >/dev/null || fail "a released file was not free for the next worker"
+node "$S/incident_apply.mjs" release "$F/incident.json" "$RESV_UNIT" >/dev/null || fail "a worker could not release everything it held"
+node -e 'const s=require(process.argv[1]);if((s.reservations||[]).length!==0)process.exit(1)' "$F/incident.json" || fail "releasing everything left a reservation behind"
+
 step "review"
 node "$S/incident_review.mjs" "$F/incident.json" | head -3
 node --input-type=module -e 'const lib=await import(process.argv[1]); const m=lib.loadCurrent(); delete m[process.argv[2]]; lib.saveCurrent(m)' "$S/incident_lib.mjs" "$CWD" || fail "pointer cleanup"
