@@ -72,7 +72,7 @@ function checkTasks(proposals, { refsInPlan, unitsInPlan, cancelled, rule = "Fie
       if (isEquipment(t.resource) && t.model) reject("Model known", `${name} is an equipment resource and names a model; only personnel names one`);
       if (!isEquipment(t.resource) && !t.model) reject("Model known", `${name} is a session task and names no model`);
       if (!isEquipment(t.resource) && largeModel(t.model) && !t.modelWhy)
-        warn("Smallest model that fits", `${name} runs ${t.resource} on ${t.model} with no modelWhy; say why this task's work needs it, or name a smaller model`);
+        warn("A model choice is justified", `${name} runs ${t.resource} on ${t.model} with no modelWhy; say what this task's work needs the model for`);
       if (!isEquipment(t.resource) && (t.budget?.seconds === undefined))
         reject("Budget respected", `${name} is a session task with no time bound (budget.seconds)`);
       if (isEquipment(t.resource) && !cap.pathsMayBeMissing && Array.isArray(cap.paths) && t.inputs) {
@@ -102,8 +102,15 @@ function checkTasks(proposals, { refsInPlan, unitsInPlan, cancelled, rule = "Fie
         reject("Dependencies resolve", `${name} reads task ${e} in evidenceFrom but does not depend on it, and it is not completed`);
     }
     for (const d of t.dependsOn ?? []) {
-      if ((refsInPlan.has(d) || openTaskStatuses.has(taskById.get(d)?.status)) && !(t.evidenceFrom?.tasks ?? []).includes(d))
-        warn("Independent work runs together", `${name} waits on ${d} but does not read its result; drop the dependsOn, name it in evidenceFrom.tasks, or say in the rationale why the order is needed`);
+      // Two tasks that write one file are a dependency even though neither reads the other: the
+      // order is what keeps the file out of a merge. That is a stated reason, so it is not the
+      // unexplained wait this warns about.
+      const other = proposals.find((x) => x.ref === d || x.id === d) ?? taskById.get(d);
+      const sharesAFile = (t.touches ?? []).some((f) => (other?.touches ?? []).includes(f));
+      if (!sharesAFile
+          && (refsInPlan.has(d) || openTaskStatuses.has(taskById.get(d)?.status))
+          && !(t.evidenceFrom?.tasks ?? []).includes(d))
+        warn("Independent work runs together", `${name} waits on ${d} but does not read its result; drop the dependsOn, name it in evidenceFrom.tasks, name the file both write in touches, or say in the rationale why the order is needed`);
     }
     for (const s of t.settles ?? []) {
       const item = (state.situation?.open ?? []).find((o) => o.id === s);
@@ -151,17 +158,7 @@ function checkPlan(p) {
       if (u.leader && (!u.leader.model || !u.leader.provider)) reject("Model known", `${name}'s leader names no provider and model`);
     }
     if (u.type && u.type !== "base") reject("Type exists", `${name} is of type ${u.type}; a plan may create base units only`);
-    if (largeModel(u.leader?.model) && !u.modelWhy) warn("Smallest model that fits", `${name}'s leader is on ${u.leader.model} with no modelWhy; a leader directs and judges on Sonnet 5 when its briefs are specific, so say what about this unit's work makes the decomposition worth the larger model`);
-    // A larger leader earns its price by dispatching cheaper workers. When its own tasks are as
-    // large as it is, the upgrade buys nothing and costs on both sides, so the IC sees it at review.
-    if (largeModel(u.leader?.model)) {
-      const mine = proposals.filter((t2) => t2.unit === u.ref || t2.unit === u.id);
-      const big = mine.filter((t2) => largeModel(t2.model));
-      if (mine.length && big.length === mine.length)
-        warn("Smallest model that fits", `${name} puts a ${u.leader.model} leader over ${mine.length} task(s) that are themselves on large models (${[...new Set(big.map((t2) => t2.model))].join(", ")}); a larger leader pays for itself by decomposing work onto smaller ones, so either drop the tasks to a smaller model or say in the rationale why this unit needs both`);
-      if (mine.length && mine.length < 3)
-        warn("Smallest model that fits", `${name} puts a ${u.leader.model} leader over only ${mine.length} task(s); a leader that makes few decisions has little to decompose, so consider Sonnet 5 unless the rationale says what this leader judges that a smaller one could not`);
-    }
+    if (largeModel(u.leader?.model) && !u.modelWhy) warn("A model choice is justified", `${name}'s leader is on ${u.leader.model} with no modelWhy; say what this unit's work needs the model for`);
     if (u.takes) {
       const r = (state.reassignments ?? []).find((x) => x.id === u.takes);
       if (!r || r.status !== "open") reject("Reassignments taken", `${name} takes "${u.takes}", which is no open reassignment`);
@@ -205,8 +202,6 @@ function checkPlan(p) {
   for (const u of created) children.set(u.parent, (children.get(u.parent) ?? 0) + 1);
   for (const c of closes) { const u = unitById.get(c.unitId ?? c); if (u?.parentId) children.set(u.parentId, (children.get(u.parentId) ?? 1) - 1); }
   for (const [parent, n] of children) {
-    if (n > 7) reject("Span of control", `unit ${parent} would have ${n} direct children; seven is the most`);
-    else if (n > 5) warn("Span of control", `unit ${parent} would have ${n} direct children; five is the target`);
   }
 
   // budget

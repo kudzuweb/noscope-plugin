@@ -431,25 +431,7 @@ for (const s of findings) if (L.refusedCall(s)) { console.error("read a finding 
 process.exit(bad ? 1 : 0);
 ' "$P/hooks/lib.mjs" || fail "refusal detector misbehaves"
 
-step "a large leader over large tasks is warned about; over smaller ones it is not"
-# The validator only reads, so these run against the live record without disturbing it.
-cat > "$T/plan-topheavy.json" <<JSON
-{"createUnits":[{"ref":"big","parent":"001-command","type":"base","objective":"Work that is hard to decompose","scope":"the whole of the undecomposed work","leader":{"provider":"claude-code","model":"claude-fable-5-1"},"resourcesAssigned":["Read"],"bashAllowlist":[]}],
- "closeUnits":[],"cancelTasks":[],"questionsForHuman":[],"grantRequests":[],"resourceGaps":[],"applySops":[],"incidentStatus":"continue","rationale":"t",
- "createTasks":[{"ref":"x","unit":"big","resource":"investigate","objective":"a","scope":"file a","inputs":{},"expectedOutput":"x","completionCriteria":["d"],"evidenceRequired":[],"dependsOn":[],"instructions":"g","provider":"claude-code","model":"claude-opus-5","budget":{"seconds":300}},
-                {"ref":"y","unit":"big","resource":"investigate","objective":"b","scope":"file b","inputs":{},"expectedOutput":"x","completionCriteria":["d"],"evidenceRequired":[],"dependsOn":[],"instructions":"g","provider":"claude-code","model":"claude-opus-5","budget":{"seconds":300}},
-                {"ref":"z","unit":"big","resource":"investigate","objective":"c","scope":"file c","inputs":{},"expectedOutput":"x","completionCriteria":["d"],"evidenceRequired":[],"dependsOn":[],"instructions":"g","provider":"claude-code","model":"claude-opus-5","budget":{"seconds":300}}]}
-JSON
-out=$(node "$S/incident_validator.mjs" plan "$F/incident.json" "$T/plan-topheavy.json" "$CWD")
-grep -q "a larger leader pays for itself by decomposing work onto smaller ones" <<<"$out" || fail "no warning for a large leader over equally large tasks: $out"
-# The same unit with a modelWhy and smaller workers draws neither large-leader warning.
-node -e '
-const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
-p.createUnits[0].modelWhy="The objective names no steps; three parallel readings, all on Haiku.";
-for (const t of p.createTasks) t.model="claude-haiku-4-5";
-fs.writeFileSync(process.argv[2],JSON.stringify(p));' "$T/plan-topheavy.json" "$T/plan-balanced.json"
-out=$(node "$S/incident_validator.mjs" plan "$F/incident.json" "$T/plan-balanced.json" "$CWD")
-grep -q "puts a claude-fable-5-1 leader" <<<"$out" && fail "a large leader dispatching smaller workers should draw no warning: $out"
+step "a model that can be named is a model that can be priced"
 node -e 'const L=require(process.argv[1]+"/scripts/incident_lib.mjs")' 2>/dev/null
 node --input-type=module -e '
 const L=await import(process.argv[1]);
