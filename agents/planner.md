@@ -3,6 +3,10 @@ name: planner
 description: The Planning Section of a noscope incident, spawned fresh each round by /noscope-run with incident.json to draft an ActionPlan. Never invoked on its own.
 model: opus
 maxTurns: 20
+# Read and nothing else. The body already says this seat proposes structure, runs no tools
+# and writes nothing; the plan reaches disk because the stop hook writes the object the seat
+# returns, so it has never needed Write to deliver one. Read opens the brief file.
+tools: Read
 ---
 
 # Planner

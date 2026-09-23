@@ -705,6 +705,26 @@ node "$S/incident_apply.mjs" release "$F/incident.json" "$RESV_A" >/dev/null
 node "$S/incident_apply.mjs" release "$F/incident.json" "$RESV_UNIT" >/dev/null
 node -e 'const s=require(process.argv[1]);if((s.reservations||[]).length!==0)process.exit(1)' "$F/incident.json" || fail "releasing everything left a reservation behind"
 
+step "a seat with no reason to write cannot write"
+cat > "$T/ro.js" <<'JS'
+const fs = require("fs");
+const bad = [];
+const WRITERS = ["Write", "Edit", "NotebookEdit", "Bash"];
+for (const f of process.argv.slice(2)) {
+  const head = fs.readFileSync(f, "utf8").split("---")[1] ?? "";
+  const m = /^tools:\s*(.+)$/m.exec(head);
+  const name = f.split("/").pop();
+  if (name === "planner.md") {
+    if (!m) { bad.push("the planner declares no tools, so it holds every tool including Write"); continue; }
+    const held = m[1].split(",").map((x) => x.trim().replace(/^\[|\]$/g, "").replace(/"/g, ""));
+    const writes = held.filter((t) => WRITERS.includes(t));
+    if (writes.length) bad.push(`the planner may use ${writes.join(", ")}; it proposes structure and writes nothing`);
+  }
+}
+if (bad.length) { console.error(bad.join("; ")); process.exit(1); }
+JS
+node "$T/ro.js" "$P"/agents/*.md || fail "a seat that must not write can write"
+
 step "review"
 node "$S/incident_review.mjs" "$F/incident.json" | head -3
 node --input-type=module -e 'const lib=await import(process.argv[1]); const m=lib.loadCurrent(); delete m[process.argv[2]]; lib.saveCurrent(m)' "$S/incident_lib.mjs" "$CWD" || fail "pointer cleanup"
