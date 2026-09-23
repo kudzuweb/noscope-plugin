@@ -13,10 +13,12 @@
 //   node incident_brief.mjs review      incident.json <draft.json> [warnings.txt]
 //   node incident_brief.mjs shape       <ObjectName>               the fillable shape of one object
 //
-// Every briefed seat is handed the shape of what it returns, under `returns`, so it fills a shape
-// rather than building an object from a list of field names. The Incident Commander is briefed by
-// nobody — it is a session — so `shape` is how it asks for the same thing for the objects it
-// writes: CommandTurn, Situation, ReviewTurn and HandoffDocument.
+// Every brief carries the shape of what its reader returns, under `returns`, so a seat fills a
+// shape rather than building an object from a list of field names. That includes the Incident
+// Commander: its own briefing carries CommandTurn (which nests Situation) and its review brief
+// carries ReviewTurn, so it is handed its form like everyone else rather than asking for it.
+// `shape` exists for the one object no brief precedes, the HandoffDocument, and for reading a
+// form by hand.
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 /**
@@ -118,7 +120,7 @@ if (kind === "sizeup") {
     incident = {}; for (const k of Object.keys(state)) { if (JSON.stringify(state[k]) !== JSON.stringify(snap[k])) incident[k] = state[k]; else unchanged.push(k); }
   }
   const resting = restingOn(state.situation, state.claims, state.tasks);
-  out = { change, incident, ...(resting.length ? { restingOn: resting } : {}), ...(unchanged.length ? { unchanged, note: "incident.json keys unchanged since your last turn are listed under unchanged and omitted; you read them then" } : {}), ask: state.period?.number ? "Write your CommandTurn: one verdict per unit whose report is listed, the period's objectives and priorities, your situation edited from the one in incident.json (carry an open item by its id; new ones without), deterministic tasks under command if you need a fact, and the status. Run `node incident_validator.mjs command incident.json turn.json` before applying it." : "First turn: evaluate each item of the briefing (accepted, rewritten, discarded), rule on each question it proposed by number (accept, discard with a why, or answer), edit the seeded situation into your own picture, set the first period's objectives and priorities, and the status. Run `node incident_validator.mjs command incident.json turn.json` before applying it." };
+  out = { returns: shapeOf("CommandTurn"), change, incident, ...(resting.length ? { restingOn: resting } : {}), ...(unchanged.length ? { unchanged, note: "incident.json keys unchanged since your last turn are listed under unchanged and omitted; you read them then" } : {}), ask: state.period?.number ? "Write your CommandTurn: one verdict per unit whose report is listed, the period's objectives and priorities, your situation edited from the one in incident.json (carry an open item by its id; new ones without), deterministic tasks under command if you need a fact, and the status. Run `node incident_validator.mjs command incident.json turn.json` before applying it." : "First turn: evaluate each item of the briefing (accepted, rewritten, discarded), rule on each question it proposed by number (accept, discard with a why, or answer), edit the seeded situation into your own picture, set the first period's objectives and priorities, and the status. Run `node incident_validator.mjs command incident.json turn.json` before applying it." };
 } else if (kind === "planner") {
   // The configured models: the planner runs on seatModel (the IC spawns it so), and names each
   // unit's leader model as `models.leader` says: a fixed id, or its own choice under "Smallest model that fits".
@@ -188,6 +190,6 @@ if (kind === "sizeup") {
 } else if (kind === "review") {
   const draft = JSON.parse(readFileSync(id, "utf8"));
   const warnings = extra ? readFileSync(extra, "utf8").split("\n").filter((l) => l.startsWith("WARN")) : [];
-  out = { draft: { ...draft, createTasks: (draft.createTasks ?? []).map((t, i) => ({ position: `#${i + 1}`, ...t })) }, warnings, valid: "Every rule of the checklist holds on this draft; review it for substance only.", questions: ["Does it work every open item of your situation?", "Does it serialize work that is independent?", "Does it put a seat on a larger model without a reason?", "Does any unit objective or task brief state what you believe rather than what is to be established?"], ask: "Answer as a ReviewTurn: approve; correct with patches (set a draft task's field by ref or #N, add a task, cancel one), applied and re-validated with no redraft; or amend with the whole plan." };
+  out = { returns: shapeOf("ReviewTurn"), draft: { ...draft, createTasks: (draft.createTasks ?? []).map((t, i) => ({ position: `#${i + 1}`, ...t })) }, warnings, valid: "Every rule of the checklist holds on this draft; review it for substance only.", questions: ["Does it work every open item of your situation?", "Does it serialize work that is independent?", "Does it put a seat on a larger model without a reason?", "Does any unit objective or task brief state what you believe rather than what is to be established?"], ask: "Answer as a ReviewTurn: approve; correct with patches (set a draft task's field by ref or #N, add a task, cancel one), applied and re-validated with no redraft; or amend with the whole plan." };
 } else { console.error(`unknown kind ${kind}`); process.exit(2); }
 console.log(JSON.stringify(out, null, 2));

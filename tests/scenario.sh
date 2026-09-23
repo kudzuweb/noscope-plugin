@@ -529,6 +529,20 @@ for OBJ in IncidentBriefing CommandTurn Situation ActionPlan ReviewTurn LeaderTu
   case "$OUT" in *"required"*|*"optional"*) ;; *) fail "the shape for $OBJ carries no field instructions: $OUT";; esac
 done
 node "$S/incident_brief.mjs" shape Nonesuch >/dev/null 2>&1 && fail "an object that does not exist was given a shape"
+# The commander is handed its form like every other seat, rather than having to ask for it.
+node "$S/incident_brief.mjs" ic "$F/incident.json" > "$T/brief-ic-shape.json" || fail "no ic brief"
+cat > "$T/icshape.js" <<'JS'
+const b = JSON.parse(require("fs").readFileSync(process.argv[2], "utf8"));
+const bad = [];
+if (!b.returns) bad.push("the commander's own brief carries no returns");
+else if (!b.returns.situation) bad.push("the commander's returns is not a CommandTurn: no situation in it");
+if (bad.length) { console.error(bad.join("; ")); process.exit(1); }
+JS
+node "$T/icshape.js" "$T/brief-ic-shape.json" || fail "the commander is not handed the form it fills"
+node "$S/incident_brief.mjs" review "$F/incident.json" "$F/draft-1.json" > "$T/brief-review-shape.json" 2>/dev/null \
+  && node -e 'const b=require(process.argv[1]);if(!b.returns||!b.returns.verdict)process.exit(1)' "$T/brief-review-shape.json" \
+  || fail "the review brief does not carry the ReviewTurn shape"
+
 # What the IC asks for and what a brief hands out come from one place.
 node "$S/incident_brief.mjs" planner "$F/incident.json" > "$T/shape-planner.json" || fail "no planner brief"
 cat > "$T/sameshape.js" <<'JS'

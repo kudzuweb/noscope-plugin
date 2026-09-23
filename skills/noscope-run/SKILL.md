@@ -88,12 +88,12 @@ Spawn `noscope:sizeup` on Haiku, in the foreground, with the seat line naming th
 Run the protocol's cycle section step by step; this table adds only what the plugin decides
 about each step.
 
-Fill a shape rather than building an object from a list of field names. Every seat you brief is
-handed the shape of what it returns, under `returns`; nobody briefs you, so ask for yours:
-`node S/incident_brief.mjs shape CommandTurn`, and the same for `Situation`, `ReviewTurn` and
-`HandoffDocument`. It prints the object with the instruction for each field in place of its
-value, which is what the seats you spawn are working from, and it is generated from the protocol
-so the two cannot drift.
+Fill a shape rather than building an object from a list of field names. Every brief carries the
+shape of what its reader returns, under `returns`, and yours is no exception: your own briefing
+carries `CommandTurn`, which nests the situation, and your review brief carries `ReviewTurn`.
+Each field's instruction stands in place of its value, and the shapes are generated from the
+protocol, so what you are filling and what the seats you spawn are filling cannot drift apart.
+The one form no brief precedes is the `HandoffDocument`, and `/noscope-handoff` gets it for you.
 
 | Step | Command and mechanics |
 |---|---|
