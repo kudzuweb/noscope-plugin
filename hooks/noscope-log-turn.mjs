@@ -22,5 +22,7 @@ const u = usageOfTranscript(input.transcript_path, cursor.lastUuid);
 if (!u.turns) process.exit(0);
 const id = ROLE === "leader" ? (process.env.NOSCOPE_UNIT ?? "") : "";
 logCall(inc.statePath, ROLE, u, id);
-writeJson(cursorPath, { lastUuid: u.lastUuid, at: new Date().toISOString(), sessionId: input.session_id ?? null });
+// The transcript path is kept so a stalled seat can be asked why without guessing where its
+// transcript lives: incident_watch.mjs reads the last thing this session said from it.
+writeJson(cursorPath, { lastUuid: u.lastUuid, at: new Date().toISOString(), sessionId: input.session_id ?? null, transcriptPath: input.transcript_path ?? null, role: ROLE, unit: id || null });
 process.exit(0);

@@ -457,6 +457,41 @@ node "$T/mkbrief.js" "$DUNIT" "$DTASK" "$T/brief-decision.json" picture
 OUTE=$(node "$S/incident_validator.mjs" brief "$F/incident.json" "$T/brief-decision.json" turn "$DUNIT" 2>&1)
 case "$OUTE" in *"A model call is a decision"*) fail "a brief carrying a picture change was refused as having nothing to decide";; *) ;; esac
 
+step "a seat that stopped working and is waiting on nothing is found, with why and for how long"
+# Every signal is one the runtime already wrote, so this runs against the live record and decides
+# nothing. A seat waiting on a subordinate is not stalled however long it waits; that is the whole
+# distinction, so it is checked in both directions.
+node "$S/incident_watch.mjs" "$F" >/dev/null 2>&1; [ $? -le 3 ] || fail "the watcher errored on a real run folder"
+cat > "$T/watchcase.js" <<'JS'
+const fs = require("fs"), path = require("path");
+const [folder, mode] = process.argv.slice(2);
+const h = path.join(folder, "hooks");
+const ago = (m) => new Date(Date.now() - m * 60000).toISOString();
+const tr = path.join(h, "watch-transcript.jsonl");
+fs.writeFileSync(tr, JSON.stringify({ type: "assistant", uuid: "w1",
+  message: { content: [{ type: "text", text: "Both tasks are away; waiting on them." }], usage: {} } }) + "\n");
+const s = JSON.parse(fs.readFileSync(path.join(folder, "incident.json"), "utf8"));
+const unit = s.units.find((u) => u.parentId) ?? s.units[0];
+fs.writeFileSync(path.join(h, "turns-watch-leader.json"), JSON.stringify(
+  { sessionId: "watch-leader", at: ago(90), role: "leader", unit: unit.id, transcriptPath: tr }));
+console.log(unit.id);
+JS
+WUNIT=$(node "$T/watchcase.js" "$F")
+OUTW=$(node "$S/incident_watch.mjs" "$F" --minutes 30; echo "rc=$?")
+case "$OUTW" in *"rc=3"*) ;; *) fail "a seat idle 90 minutes with nothing running was not found (got: $OUTW)";; esac
+case "$OUTW" in *"90 minutes"*) ;; *) fail "the watcher did not say how long";; esac
+case "$OUTW" in *"waiting on them"*) ;; *) fail "the watcher did not say why, from the seat's own last words";; esac
+case "$OUTW" in *"tell the IC"*) ;; *) fail "the watcher did not name the superior to tell";; esac
+
+# The same seat with a threshold it has not crossed is not reported.
+OUTQ=$(node "$S/incident_watch.mjs" "$F" --minutes 600; echo "rc=$?")
+case "$OUTQ" in *"rc=0"*) ;; *) fail "a seat inside the threshold was reported as stalled";; esac
+
+# --notify queues it where every other hook queues news for the IC.
+node "$S/incident_watch.mjs" "$F" --minutes 30 --notify >/dev/null 2>&1
+grep -q '"seat":"watch"' "$F/hooks/applied.jsonl" || fail "a stall was not queued for the superior"
+rm -f "$F/hooks/turns-watch-leader.json"
+
 step "a model that can be named is a model that can be priced"
 node -e 'const L=require(process.argv[1]+"/scripts/incident_lib.mjs")' 2>/dev/null
 node --input-type=module -e '
