@@ -88,6 +88,13 @@ Spawn `noscope:sizeup` on Haiku, in the foreground, with the seat line naming th
 Run the protocol's cycle section step by step; this table adds only what the plugin decides
 about each step.
 
+Fill a shape rather than building an object from a list of field names. Every seat you brief is
+handed the shape of what it returns, under `returns`; nobody briefs you, so ask for yours:
+`node S/incident_brief.mjs shape CommandTurn`, and the same for `Situation`, `ReviewTurn` and
+`HandoffDocument`. It prints the object with the instruction for each field in place of its
+value, which is what the seats you spawn are working from, and it is generated from the protocol
+so the two cannot drift.
+
 | Step | Command and mechanics |
 |---|---|
 | 1. Command turn | `node S/incident_brief.mjs ic $F/incident.json > $F/brief-ic-<period>.json`; read it: the change since your last turn, and under `incident` only the keys of the state that changed since then (`unchanged` names the rest, which you read on an earlier turn; on a fresh session it is whole). Write `$F/turn-<period>.json`; `node S/incident_validator.mjs command $F/incident.json $F/turn-<period>.json`; fix every `REJECT`; `node S/incident_apply.mjs command $F/incident.json $F/turn-<period>.json`. On the first turn rule on every proposed question. Then commit the run folder: `git -C <incidentsDir> add <project>/<id> && git -C <incidentsDir> commit -q -m "<project> <id>: period <n>"`. |

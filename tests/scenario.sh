@@ -519,6 +519,31 @@ OUTS=$(env -u NOSCOPE_NO_DAEMON node "$S/incident_daemon.mjs" stop-if-idle 2>&1)
 case "$OUTS" in *"stays up"*) ;; *) fail "the failsafe stopped while a run was still registered (got: $OUTS)";; esac
 node "$T/regrun.js" "$F" remove
 
+step "every object a seat fills is available as a shape, including the ones nobody briefs"
+# A briefed seat is handed its shape under `returns`. The IC is briefed by nobody, so it asks; the
+# two must be the same thing, or the seat spawning work and the seat doing it are filling out
+# different forms.
+for OBJ in IncidentBriefing CommandTurn Situation ActionPlan ReviewTurn LeaderTurn UnitSituation HandoffDocument; do
+  OUT=$(node "$S/incident_brief.mjs" shape "$OBJ" 2>&1) || fail "no shape for $OBJ"
+  [ -n "$OUT" ] || fail "the shape for $OBJ is empty"
+  case "$OUT" in *"required"*|*"optional"*) ;; *) fail "the shape for $OBJ carries no field instructions: $OUT";; esac
+done
+node "$S/incident_brief.mjs" shape Nonesuch >/dev/null 2>&1 && fail "an object that does not exist was given a shape"
+# What the IC asks for and what a brief hands out come from one place.
+node "$S/incident_brief.mjs" planner "$F/incident.json" > "$T/shape-planner.json" || fail "no planner brief"
+cat > "$T/sameshape.js" <<'JS'
+const fs = require("fs");
+const brief = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const asked = fs.readFileSync(process.argv[3], "utf8").trimEnd();
+const carried = typeof brief.returns === "string" ? brief.returns.trimEnd() : JSON.stringify(brief.returns, null, 2);
+if (carried !== asked) {
+  console.error("the shape a planner is handed and the shape the IC can ask for differ");
+  process.exit(1);
+}
+JS
+node "$S/incident_brief.mjs" shape ActionPlan > "$T/shape-actionplan.txt"
+node "$T/sameshape.js" "$T/shape-planner.json" "$T/shape-actionplan.txt" || fail "briefed and asked-for shapes disagree"
+
 step "a model that can be named is a model that can be priced"
 node -e 'const L=require(process.argv[1]+"/scripts/incident_lib.mjs")' 2>/dev/null
 node --input-type=module -e '

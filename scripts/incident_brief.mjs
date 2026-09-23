@@ -11,6 +11,12 @@
 //   node incident_brief.mjs turn        incident.json <unit-id>
 //   node incident_brief.mjs task        incident.json <task-id>
 //   node incident_brief.mjs review      incident.json <draft.json> [warnings.txt]
+//   node incident_brief.mjs shape       <ObjectName>               the fillable shape of one object
+//
+// Every briefed seat is handed the shape of what it returns, under `returns`, so it fills a shape
+// rather than building an object from a list of field names. The Incident Commander is briefed by
+// nobody — it is a session — so `shape` is how it asks for the same thing for the objects it
+// writes: CommandTurn, Situation, ReviewTurn and HandoffDocument.
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 /**
@@ -27,6 +33,20 @@ function resultBodyOf(d) {
 import { loadState, readLog, isDeterministic, rootUnit, resolveModel, runConfig, AVAILABLE_MODELS, shapeOf, checklistText, aliasOf} from "./incident_lib.mjs";
 
 const [kind, statePath, id, extra] = process.argv.slice(2);
+// `shape` names an object rather than a record, so it is answered before the record is required.
+if (kind === "shape") {
+  const name = statePath;
+  const known = ["IncidentBriefing", "CommandTurn", "Situation", "ActionPlan", "ReviewTurn", "LeaderTurn", "UnitSituation", "HandoffDocument"];
+  if (!name) { console.error(`usage: incident_brief.mjs shape <ObjectName>\n  one of: ${known.join(", ")}`); process.exit(2); }
+  const out = shapeOf(name);
+  if (!out) { console.error(`no object called "${name}"; the protocol defines ${known.join(", ")}`); process.exit(2); }
+  // Printed exactly as a brief carries it. The eight named objects are shapes, which are JSON; a
+  // task resource has no shape and falls back to a field list, which is text. Printing an object
+  // with console.log would give node's inspect format — single quotes and no JSON — which is not
+  // what any seat is handed.
+  console.log(typeof out === "string" ? out : JSON.stringify(out, null, 2));
+  process.exit(0);
+}
 if (!kind || !statePath) { console.error("usage: see the header of incident_brief.mjs"); process.exit(2); }
 const state = loadState(statePath);
 const log = readLog(statePath);
