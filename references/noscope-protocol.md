@@ -693,6 +693,19 @@ The first turn of an incident is `FirstCommandTurn`, the same object with `brief
   - `settledBy` (string, required): What would settle it, in prose: what must be read, run or reproduced; the plan's task that works it names this item's id in settles
 - `changed` (string, required): What changed in your unit's picture since its last report
 
+### What the record keeps of a task
+
+A seat returns its result whole and the runtime writes that object to a file in the run folder.
+What `incident.json` keeps is a line: for a session task the outcome, one summary and the path
+to that file; for an equipment task the measure and the path. The body stays in the file, and in
+the seat's own transcript.
+
+The reason is cost, not tidiness. A task's claims are extracted into `claims` when it ends, so
+the body has already given up what the record reasons from, and everything handed the planner
+carries the whole state — one file read kept 141K of file content in `incident.json` and sent it
+again every period afterwards. A brief that attaches a task's evidence still attaches it whole:
+`incident_brief.mjs` reads the body from the file.
+
 ### A task session's result (`investigate`): the resource's output
 
 - `outcome` (one of `answered`, `insufficient`, required)

@@ -25,7 +25,7 @@
 // rNN reassignments, oNN open items, qNN questions, pNN reports, gNN resource gaps.
 import { loadState, saveState, appendLog, nextId, OPEN_TASK, isDeterministic, rootUnit, refreshReady, cascadeCancel, measureOf, priceOf, loadRun, saveRun, loadSavedConfigs, saveSavedConfigs, resolveModel, runConfig, clearSessions } from "./incident_lib.mjs";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 
@@ -37,6 +37,8 @@ const said = [];
 const say = (s) => said.push(s);
 const now = () => new Date().toISOString();
 const json = (p) => JSON.parse(readFileSync(p, "utf8"));
+/** One line, so the record stays readable; the body is a file away. */
+const clipLine = (s, n = 280) => { const t = String(s ?? "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "\u2026" : t; };
 
 /** The end of a run closes every unit still active and cancels every open task, so nothing is left running in the record; the IC tells each leader session to close. */
 function closeAllUnits(reason, actor) {
@@ -170,6 +172,8 @@ else if (mode === "start") {
 }
 else if (mode === "ending") {
   const r = json(a); const t = state.tasks.find((x) => x.id === b); if (!t) { console.error(`no task ${b}`); process.exit(1); }
+  // Where the seat's own object is, so the record can point at the body instead of holding it.
+  const resultBody = resolve(a);
   // A task ends once. A seat resumed by a later message stops again, and its stop hook would
   // apply the same result twice, doubling its claims (seen 2026-09-21); the second ending is refused.
   if (!OPEN_TASK.has(t.status)) { console.error(`task ${t.id} already ended (${t.status}); nothing applied`); process.exit(1); }
@@ -178,13 +182,29 @@ else if (mode === "ending") {
   if (isDeterministic(state, t.resource)) {
     const output = r.output ?? r; const measure = r.measure ?? measureOf(t.resource, output);
     if (r.error) { t.status = "failed"; t.reason = r.error; events.push({ type: "task.failed", actor, taskId: t.id, reason: r.error }); say(`task ${t.id} failed: ${r.error}`); }
-    else { t.status = "completed"; t.result = output; t.measure = measure; state.evidence.push({ taskId: t.id, resource: t.resource, inputs: t.inputs, measure }); events.push({ type: "task.completed", actor, taskId: t.id, evidence: measure }); say(`task ${t.id} completed; evidence: ${measure}`); }
+    else {
+      // The measure and where the output is, not the output. A tool's output is the largest
+      // thing in a run — one file read carried 141K of file content in the record and went to
+      // the planner every period after — and the session that ran the tool has already seen it.
+      // A brief that attaches this evidence reads the body from the file, so nothing is lost.
+      t.status = "completed"; t.result = { measure, body: resultBody }; t.measure = measure;
+      state.evidence.push({ taskId: t.id, resource: t.resource, inputs: t.inputs, measure, body: resultBody });
+      events.push({ type: "task.completed", actor, taskId: t.id, evidence: measure });
+      say(`task ${t.id} completed; evidence: ${measure}`);
+    }
   } else if (r.error || r.refusals) {
     t.status = "failed"; t.reason = r.error ?? "refused twice"; t.refusals = r.refusals; events.push({ type: "task.failed", actor, taskId: t.id, reason: t.reason, refusals: r.refusals }); say(`task ${t.id} failed: ${t.reason}`);
   } else if (r.outcome === "insufficient") {
-    t.status = "insufficient"; t.needed = r.needed ?? []; t.result = r; events.push({ type: "task.insufficient", actor, taskId: t.id, needed: t.needed }); say(`task ${t.id} insufficient: ${(t.needed ?? []).map((n) => n.kind).join(", ")}`);
+    t.status = "insufficient"; t.needed = r.needed ?? []; t.result = { outcome: r.outcome, summary: clipLine(r.summary ?? r.findings?.summary), body: resultBody }; events.push({ type: "task.insufficient", actor, taskId: t.id, needed: t.needed }); say(`task ${t.id} insufficient: ${(t.needed ?? []).map((n) => n.kind).join(", ")}`);
   } else {
-    t.status = "completed"; t.result = { outcome: r.outcome, findings: r.findings, summary: r.summary ?? r.findings?.summary }; if (r.pictureChanged) t.pictureChanged = true;
+    // What the record keeps of a session task is a line: the outcome, one summary, and where the
+    // seat's own object is. The body stays in that file, which the seat hook already wrote, and
+    // in the subagent's transcript. Keeping it here too put one reproduce task's 141K of
+    // observations into incident.json and shipped it to the planner every period afterwards,
+    // for claims that had already been extracted out of it.
+    t.status = "completed";
+    t.result = { outcome: r.outcome, summary: clipLine(r.summary ?? r.findings?.summary), body: resultBody };
+    if (r.pictureChanged) t.pictureChanged = true;
     const attached = new Set((t.evidenceFrom?.tasks ?? []).filter((id) => { const d = state.tasks.find((x) => x.id === id); return d?.status === "completed" && isDeterministic(state, d.resource); }));
     const ids = [];
     for (const c of r.claims ?? []) {

@@ -349,6 +349,11 @@ function checkResult(r, taskId) {
   if (!task) { reject("Fields complete", `"${taskId}" is no task`); return; }
   if (!["answered", "insufficient"].includes(r.outcome)) reject("Fields complete", `outcome is "${r.outcome}"; answered or insufficient`);
   if (r.outcome === "answered" && (r.findings === null || r.findings === undefined)) reject("Fields complete", "an answered result carries findings");
+  // The record keeps this line and leaves the body in the file, so a result with no summary
+  // leaves the record saying a task finished and nothing about what happened in it.
+  const summary = r.summary ?? r.findings?.summary;
+  if (typeof summary !== "string" || summary.trim() === "")
+    reject("Fields complete", "the result carries no summary; one line saying what happened, which is what the record keeps of this task");
   if (r.pictureChanged !== undefined && typeof r.pictureChanged !== "boolean") reject("Fields complete", "pictureChanged is true or false: whether what this task found is not what its brief expected, which calls the leader");
   if (r.outcome === "insufficient") {
     if (!Array.isArray(r.needed) || r.needed.length === 0) reject("Fields complete", "an insufficient result names what it lacked (needed)");

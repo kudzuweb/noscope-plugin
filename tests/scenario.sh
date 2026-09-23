@@ -191,12 +191,43 @@ Plugin root: $P. Run folder: $F. Your task: $t."
 done
 node -e 'const [f,cwd,to]=process.argv.slice(1);require("fs").writeFileSync(f,JSON.stringify({cwd,tool_name:"SendMessage",tool_input:{to,message:"Brief file: /nonexistent/brief.json. Plugin root: x. Run folder: y. Your task: 001-t02."}}))' "$T/in.json" "$CWD" "$LEADER_NAME"
 node "$H/noscope-guard-brief.mjs" < "$T/in.json" 2>/dev/null && fail "the guard let a message through to $LEADER_NAME naming a brief file that does not exist; it is keying off the recipient's name again"
-R2='{"taskId": "001-t02", "outcome": "answered", "claims": [{"subject": "the page container", "predicate": "scrolls to the bottom after a middle comment is deleted", "object": {"before": 0, "after": 5681}, "confidence": 0.97, "evidence": ["measured"], "basis": "observed", "cites": ["001-t01"]}, {"subject": "the comment rail", "predicate": "does not scroll", "object": {"before": 120, "after": 120}, "confidence": 0.95, "evidence": ["measured"], "basis": "observed", "cites": []}, {"subject": "the focus( call in src/a.js", "predicate": "is the one that runs on deletion", "object": {"file": "src/a.js"}, "confidence": 0.65, "basis": "inferred", "cites": []}], "findings": {"observations": [{"step": "delete 3 of 6", "observed": "page 0 -> 5681; rail unchanged"}]}, "needed": []}'
+R2='{"taskId": "001-t02", "outcome": "answered", "claims": [{"subject": "the page container", "predicate": "scrolls to the bottom after a middle comment is deleted", "object": {"before": 0, "after": 5681}, "confidence": 0.97, "evidence": ["measured"], "basis": "observed", "cites": ["001-t01"]}, {"subject": "the comment rail", "predicate": "does not scroll", "object": {"before": 120, "after": 120}, "confidence": 0.95, "evidence": ["measured"], "basis": "observed", "cites": []}, {"subject": "the focus( call in src/a.js", "predicate": "is the one that runs on deletion", "object": {"file": "src/a.js"}, "confidence": 0.65, "basis": "inferred", "cites": []}], "findings": {"summary": "Deleting a middle comment scrolls the page container to the bottom; the rail does not move.", "observations": [{"step": "delete 3 of 6", "observed": "page 0 -> 5681; rail unchanged"}]}, "needed": []}'
 out=$(seat_stop noscope:task-reproduce t2 "$R2"); expect_silent "$out" result-t02
 node "$S/incident_apply.mjs" ending "$F/incident.json" "$F/hooks/$(ls -t "$F/hooks" | grep '^task-reproduce' | head -1)" 001-t02 2>/dev/null && fail "a second ending of the same task was applied"
 out=$(seat_stop noscope-task-reproduce-001-t02 t2 '"just prose, no object"'); expect_silent "$out" "a finished seat resumed by a message is left alone"
 node -e 'const s=require(process.argv[1]);if(s.claims.filter(c=>c.provenance.taskId==="001-t02").length!==3)process.exit(1)' "$F/incident.json" || fail "claims duplicated by a second ending"
-step "a task that never returns a valid object: three pushes back, then it ends failed"
+step "the record keeps a line of a session task, and the body stays in its file"
+cat > "$T/lean.js" <<'JS'
+const fs = require("fs");
+const s = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const bad = [];
+const t = s.tasks.find(x => x.id === "001-t02");
+const r = (t && t.result) || {};
+if (r.findings) bad.push("the record still holds the findings body");
+if (typeof r.summary !== "string" || !r.summary.trim()) bad.push("no summary line was kept");
+if (!r.body) bad.push("the record does not say where the body is");
+if (JSON.stringify(t).length > 4000) bad.push("the stored task is " + JSON.stringify(t).length + " bytes, not a line");
+try {
+  const body = JSON.parse(fs.readFileSync(r.body, "utf8"));
+  if (!body.findings) bad.push("the file the record points at holds no findings");
+} catch (e) { bad.push("the body the record points at could not be read"); }
+const eq = s.tasks.find(x => x.id === "001-t01");
+if (!eq || !eq.result || !eq.result.measure || !eq.result.body) bad.push("an equipment task kept no measure or no pointer to its output");
+if (eq && eq.result && eq.result.matches) bad.push("an equipment task still stores its whole output in the record");
+try {
+  const out = JSON.parse(fs.readFileSync(eq.result.body, "utf8"));
+  const body2 = out.output || out;
+  if (!body2.matches) bad.push("the file an equipment task points at does not hold its output");
+} catch (e) { bad.push("an equipment task's output file could not be read"); }
+if (bad.length) { console.error(bad.join("; ")); process.exit(1); }
+JS
+node "$T/lean.js" "$F/incident.json" || fail "a session task's result is not stored as a line"
+# A result with no line is refused: the record would say a task finished and nothing more.
+cat > "$T/nosum.json" <<'JSON'
+{"taskId":"001-t02","outcome":"answered","findings":{"observations":[]},"claims":[]}
+JSON
+node "$S/incident_validator.mjs" result "$F/incident.json" "$T/nosum.json" 001-t02 2>&1 | grep -q "no summary" || fail "a result with no summary line was accepted"
+
 for i in 1 2 3; do out=$(seat_stop noscope:task-investigate t3 '{"taskId":"001-t03","outcome":"answered"}'); expect_block "$out" "give-up round $i"; done
 out=$(seat_stop noscope:task-investigate t3 '{"taskId":"001-t03","outcome":"answered"}'); expect_silent "$out" "give-up final"
 node -e 'const s=require(process.argv[1]);const t=s.tasks.find(t=>t.id==="001-t03");if(t.status!=="failed")process.exit(1)' "$F/incident.json" || fail "t03 not failed after give-up"

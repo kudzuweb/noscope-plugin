@@ -13,6 +13,17 @@
 //   node incident_brief.mjs review      incident.json <draft.json> [warnings.txt]
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
+/**
+ * A task's result as a brief attaches it: the record keeps a line and the body stays in the
+ * file the seat's object was read from, so evidence is still attached whole without the state
+ * carrying it. An older run, or a file since removed, falls back to what the record holds.
+ */
+function resultBodyOf(d) {
+  if (!d?.result) return null;
+  const p = d.result.body;
+  if (p) { try { return JSON.parse(readFileSync(p, "utf8")); } catch {} }
+  return d.result;
+}
 import { loadState, readLog, isDeterministic, rootUnit, resolveModel, runConfig, AVAILABLE_MODELS, fieldListOf, checklistText, aliasOf} from "./incident_lib.mjs";
 
 const [kind, statePath, id, extra] = process.argv.slice(2);
@@ -124,7 +135,7 @@ if (kind === "sizeup") {
   const t = state.tasks.find((x) => x.id === id); if (!t) { console.error(`no task ${id}`); process.exit(1); }
   const u = state.units.find((x) => x.id === t.unitId);
   out = { returns: (fieldListOf(t.resource) ?? fieldListOf("investigate")) + `\n- \`taskId\` (string, required by the plugin): "${t.id}", so the record knows which task the result ends`, objective: state.incident.objective, unit: { id: u?.id, objective: u?.objective },
-    evidence: { claims: state.claims.filter((c) => (t.evidenceFrom?.claims ?? []).includes(c.id)).map((c) => ({ ...claimLine(c), object: c.object })), results: (t.evidenceFrom?.tasks ?? []).map((tid) => { const d = state.tasks.find((x) => x.id === tid); return { taskId: tid, resource: d?.resource, result: d?.result ?? null }; }) },
+    evidence: { claims: state.claims.filter((c) => (t.evidenceFrom?.claims ?? []).includes(c.id)).map((c) => ({ ...claimLine(c), object: c.object })), results: (t.evidenceFrom?.tasks ?? []).map((tid) => { const d = state.tasks.find((x) => x.id === tid); return { taskId: tid, resource: d?.resource, result: resultBodyOf(d) }; }) },
     siblings: state.tasks.filter((x) => x.unitId === t.unitId && x.id !== t.id && ["pending", "ready", "running"].includes(x.status))
       .map((x) => ({ taskId: x.id, resource: x.resource, status: x.status, scope: x.scope ?? null })),
     task: { id: t.id, resource: t.resource, objective: t.objective, scope: t.scope, inputs: t.inputs, expectedOutput: t.expectedOutput, completionCriteria: t.completionCriteria, evidenceRequired: t.evidenceRequired, instructions: t.instructions, model: t.model, modelAlias: aliasOf(t.model), budget: t.budget, strikeTeam: t.strikeTeam },
