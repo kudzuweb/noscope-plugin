@@ -138,12 +138,17 @@
       "Reserve a file before you write it. The files your brief names in `touches` are reserved for",
       "you when you start, and they are yours until you end. When the work turns out to need a file",
       "your brief did not name, reserve it first: `node $PLUGIN/scripts/incident_apply.mjs reserve",
-      "<run folder>/incident.json <your id> <path>...`. A file nobody holds becomes yours and you",
-      "carry on \u2014 send the line it prints to the seat it names, because the picture above you is",
-      "wrong until you do, and being told costs that seat nothing. A file another worker holds is",
-      "not reserved and the command exits 3: stop there, send the line it prints, and wait for new",
-      "orders. Never write a file the command refused you; the reservation is how the work of two",
-      "workers stays out of one merge, and writing anyway is the collision it exists to prevent."
+      "<run folder>/incident.json <your id> <path>...`. Every file nobody holds becomes yours and you",
+      "carry on. A file someone else holds is not yours, and you are recorded as waiting for it; you",
+      "are told when it frees. Do the work you can with what you got and leave what needs the held",
+      "file \u2014 never write a file the command did not give you, because that is the collision the",
+      "reservation exists to prevent. Send the line it prints to the seat it names, every time: it is",
+      "how the picture above you stays true, and being told costs that seat nothing.",
+      "",
+      "Two exit codes mean something. 3 says you are waiting for a file and can get on with the rest.",
+      "4 says the waiting runs in a circle: you wait on a worker that waits, through however many",
+      "others, on a file you hold. No release is coming, so do not wait \u2014 send the line and let the",
+      "seat it names reorder the work or free something."
     ]
   },
   "assembly": {

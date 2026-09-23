@@ -180,12 +180,20 @@ else if (mode === "ending") {
   // apply the same result twice, doubling its claims (seen 2026-09-21); the second ending is refused.
   if (!OPEN_TASK.has(t.status)) { console.error(`task ${t.id} already ended (${t.status}); nothing applied`); process.exit(1); }
   const actor = `task:${t.id}`;
-  // Whatever the task held is free the moment it ends, however it ended.
+  // Whatever the task held is free the moment it ends, however it ended, and it stops waiting
+  // for anything it never got. Whoever was waiting on a file it held is named, so the release
+  // reaches the worker that wanted it.
   if ((state.reservations ?? []).some((r) => r.by === t.id)) {
     const freed = state.reservations.filter((r) => r.by === t.id).map((r) => r.path);
     state.reservations = state.reservations.filter((r) => r.by !== t.id);
     events.push({ type: "files.released", actor: `task:${t.id}`, unit: t.unitId, paths: freed });
     say(`${t.id} released ${freed.join(", ")}`);
+    for (const w of (state.fileWaits ?? []).filter((x) => freed.includes(x.path)))
+      say(`notify: tell ${w.by} (unit ${w.unit}) — ${w.path} is free; reserve it before writing`);
+  }
+  if ((state.fileWaits ?? []).some((w) => w.by === t.id)) {
+    state.fileWaits = state.fileWaits.filter((w) => w.by !== t.id);
+    say(`${t.id} is no longer waiting on anything`);
   }
 
   t.endedAt = now(); t.heard = false;
@@ -397,15 +405,19 @@ else if (mode === "budget") {
     say(`the ${dim} bound is ${n}; ${spent} already spent, ${n - spent} left${n - spent <= 0 ? " — the next pass starts nothing until it is raised" : ""}`);
   }
 }
-// A file being worked is reserved by whoever is working it, so nobody else starts on it and
-// nobody has to guess. A reservation is a notice, not a lock: nothing prevents a write. What it
-// buys is that a second worker learns, before it starts, that someone is already there.
+// A file being written is reserved by whoever is writing it, so a second worker learns before it
+// starts rather than at a merge. A reservation is a notice, not a lock: nothing prevents a write.
 //
-// Reserving is one action that both records the paths and says who to tell. A worker that
-// reaches for a file it did not declare reserves it and carries on when the file is free; when
-// another worker holds it, nothing is reserved, this exits 3, and the worker stops and sends the
-// line printed here. A conflict inside one unit is the leader's to settle; a conflict across
-// units is the IC's, because neither leader can see the other's work.
+// Reserving is one action that records the files and says who to tell, so the list and the report
+// cannot drift apart. It takes every file that is free and waits for the rest, because a worker
+// with three files and one conflict can usually get on with the two: blocking all of it would
+// give up the parallelism the reservation exists to protect. A wait is recorded, so releasing a
+// file names the workers who were waiting for it instead of announcing it to nobody.
+//
+// What waiting cannot survive is a cycle — this worker wants a file held by a worker that wants a
+// file this one holds. No release is coming, so that is escalated at once rather than waited on.
+// A conflict inside one unit is the leader's to settle; a conflict across units is the IC's,
+// because neither leader can see the other's work.
 else if (mode === "reserve" || mode === "release") {
   const actorId = a;
   const paths = [b, ...rest].filter((x) => x !== undefined && x !== "");
@@ -413,51 +425,77 @@ else if (mode === "reserve" || mode === "release") {
   const unitId = task ? task.unitId : (state.units.find((x) => x.id === actorId)?.id ?? null);
   if (!unitId) { console.error(`no task or unit ${actorId}`); process.exit(1); }
   state.reservations = state.reservations ?? [];
+  state.fileWaits = state.fileWaits ?? [];
+  const holderOf = (path) => state.reservations.find((x) => x.path === path)?.by ?? null;
+  const unitOfActor = (id) => state.tasks.find((x) => x.id === id)?.unitId
+    ?? state.units.find((x) => x.id === id)?.id ?? null;
+  const tellWho = (units) => units.some((u) => u !== unitId) ? "the IC" : `the leader of ${unitId}`;
 
   if (mode === "release") {
-    const free = paths.length > 0
-      ? state.reservations.filter((r) => r.by === actorId && paths.includes(r.path))
-      : state.reservations.filter((r) => r.by === actorId);
-    if (free.length === 0) say(`${actorId} held nothing to release`);
+    const held = state.reservations.filter((r) => r.by === actorId && (paths.length === 0 || paths.includes(r.path)));
+    if (held.length === 0) say(`${actorId} held nothing to release`);
     else {
-      const gone = new Set(free.map((r) => r.path));
+      const gone = new Set(held.map((r) => r.path));
       state.reservations = state.reservations.filter((r) => !(r.by === actorId && gone.has(r.path)));
       events.push({ type: "files.released", actor: actorId, unit: unitId, paths: [...gone] });
       say(`${actorId} released ${[...gone].join(", ")}`);
-      say(`notify: any worker waiting on ${[...gone].join(", ")} may now reserve ${gone.size === 1 ? "it" : "them"}`);
+      // Whoever was waiting is named, so the release reaches someone rather than the air.
+      const freed = state.fileWaits.filter((w) => gone.has(w.path));
+      for (const w of freed) say(`notify: tell ${w.by} (unit ${w.unit}) — ${w.path} is free; reserve it before writing`);
+      if (freed.length === 0) say(`nobody was waiting on ${[...gone].join(", ")}`);
     }
   } else {
     if (paths.length === 0) { console.error("reserve needs at least one path"); process.exit(2); }
-    // Decide over the whole set before taking any of it. A worker that is going to stop must not
-    // be left holding the files it could have had: the seat that gives it new orders needs them
-    // free to reassign, and a stopped worker sitting on a reservation is the deadlock this whole
-    // mechanism exists to avoid.
-    const held = [], took = [], mine = [];
+    // This worker no longer waits for anything it is asking for now.
+    state.fileWaits = state.fileWaits.filter((w) => !(w.by === actorId && paths.includes(w.path)));
+    const took = [], blocked = [], mine = [];
     for (const path of paths) {
       const r = state.reservations.find((x) => x.path === path);
       if (r && r.by === actorId) mine.push(path);
-      else if (r) held.push({ path, by: r.by, unit: r.unit });
-      else took.push(path);
+      else if (r) blocked.push({ path, by: r.by, unit: r.unit });
+      else { state.reservations.push({ path, by: actorId, unit: unitId, at: now() }); took.push(path); }
     }
-    if (held.length === 0) for (const path of took) state.reservations.push({ path, by: actorId, unit: unitId, at: now() });
+    for (const w of blocked) state.fileWaits.push({ path: w.path, by: actorId, unit: unitId, heldBy: w.by, at: now() });
+
+    // A cycle: follow who this worker waits on, and on, and see whether it comes back here.
+    const waitsOn = (who) => [...new Set(state.fileWaits.filter((w) => w.by === who).map((w) => holderOf(w.path)).filter(Boolean))];
+    const cycle = [];
+    const seen = new Set([actorId]);
+    let frontier = waitsOn(actorId);
+    while (frontier.length > 0) {
+      if (frontier.includes(actorId)) { cycle.push(actorId); break; }
+      const next = [];
+      for (const who of frontier) if (!seen.has(who)) { seen.add(who); cycle.push(who); next.push(...waitsOn(who)); }
+      frontier = next;
+    }
+    const deadlocked = cycle.includes(actorId);
+
     if (mine.length > 0) say(`${actorId} already held ${mine.join(", ")}`);
-    if (took.length > 0 && held.length === 0) {
+    if (took.length > 0) {
       events.push({ type: "files.reserved", actor: actorId, unit: unitId, paths: took });
       say(`${actorId} reserved ${took.join(", ")}`);
     }
-    if (held.length > 0) {
-      events.push({ type: "files.conflict", actor: actorId, unit: unitId, wanted: held });
-      const crossUnit = held.filter((h) => h.unit !== unitId);
-      for (const h of held) say(`${h.path} is held by ${h.by} (unit ${h.unit}); not reserved`);
-      if (took.length > 0) say(`${took.join(", ")} ${took.length === 1 ? "was" : "were"} free but not taken, so the seat giving you orders can reassign ${took.length === 1 ? "it" : "them"}`);
-      const who = crossUnit.length > 0 ? "the IC" : `the leader of ${unitId}`;
-      const list = held.map((h) => `${h.path} (held by ${h.by})`).join(", ");
-      say(`notify: tell ${who} — ${actorId} needs ${list}; stopping until ${who === "the IC" ? "the IC" : "the leader"} gives new orders`);
+    if (blocked.length === 0) {
+      if (took.length > 0) say(`notify: tell the leader of ${unitId} — ${actorId} took ${took.join(", ")}; no conflict, work continues`);
+    } else {
+      events.push({ type: "files.waiting", actor: actorId, unit: unitId, wanted: blocked, deadlock: deadlocked });
+      for (const w of blocked) say(`${w.path} is held by ${w.by} (unit ${w.unit}); you are waiting on it`);
+      const who = tellWho(blocked.map((w) => w.unit));
+      const list = blocked.map((w) => `${w.path} (held by ${w.by})`).join(", ");
+      const got = took.length > 0 ? `took ${took.join(", ")} and ` : "";
+      if (deadlocked) {
+        say(`DEADLOCK: the waiting runs in a circle — ${[actorId, ...cycle].join(" waits on ")}`);
+        const dWho = tellWho([...cycle, actorId].map(unitOfActor).filter(Boolean));
+        say(`notify: tell ${dWho} — ${actorId} ${got}is deadlocked on ${list}; no release is coming, so one of them must be reordered or released`);
+        saveState(statePath, state); appendLog(statePath, events);
+        for (const s of said) console.log(s);
+        process.exit(4);
+      }
+      say(`notify: tell ${who} — ${actorId} ${got}is waiting on ${list}; it continues with what it has and you will be told when the file frees`);
       saveState(statePath, state); appendLog(statePath, events);
       for (const s of said) console.log(s);
       process.exit(3);
     }
-    if (took.length > 0) say(`notify: tell the leader of ${unitId} — ${actorId} took ${took.join(", ")}; no conflict, work continues`);
   }
 }
 else if (mode === "stop") {
