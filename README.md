@@ -48,7 +48,19 @@ status-line sensor the compaction guard needs (or adds it to your existing statu
 your consent), asks where incident records go, when your workday starts, at what context percentage a
 session should hand off, and which model each seat above a task runs on (the directing session and the per-slice ones Sonnet 5, the planner Opus 5 by default; `smallest` routes by the rule in the protocol), asks separately whether to suppress the folder-trust dialog for a repository while an incident
 runs on it, writes `~/.claude/noscope/config.json`, writes an adapter for your terminal at
-`~/.claude/noscope/open-tab.sh` if it can drive one, and runs the scenario test.
+`~/.claude/noscope/open-tab.sh` if it can drive one, installs the failsafe (a launchd agent on a
+Mac, and elsewhere the command to put on a timer of your own), and runs the scenario test.
+
+The failsafe is the one part that lives outside a run, because the parts inside one cannot see a
+seat that simply stops: the loop hook pushes a session that is working and the heartbeat restarts
+a run that died, and a session sitting there doing nothing is neither. Every ten minutes it looks
+at the runs and seats that registered themselves — a run registers when it opens and deregisters
+when it ends, a seat when it joins — and reports any that has taken no turn for too long and is
+waiting on nothing, with how long and why, quoted from the error that stopped it or the last thing
+it said. A seat waiting on work that is running is not stalled however long it waits. Each one is
+queued for the seat above it, so the Incident Commander is told the next time it does anything.
+`node ${CLAUDE_PLUGIN_ROOT}/scripts/incident_daemon.mjs status` says whether it is loaded and what
+it last found; `uninstall` removes it.
 
 ## Run an incident
 
