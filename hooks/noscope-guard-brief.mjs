@@ -3,6 +3,7 @@
 // mode first, so nothing reaches a seat that is not built from the record, and nothing below
 // the IC carries its situation. Refuses with the REJECT lines; lets anything else through.
 import { join } from "node:path";
+import { existsSync } from "node:fs";
 import { readInput, openIncident, ENDED, briefAndSeatLine, run, rejects, writeJson, stamp, inflight } from "./lib.mjs";
 
 const input = readInput();
@@ -35,8 +36,11 @@ if (!seat.pluginRoot || !seat.runFolder) refuse("the seat line is missing; end t
 const id = kind === "orientation" || kind === "turn" ? seat.unitId : kind === "task" ? seat.taskId : null;
 if ((kind === "orientation" || kind === "turn") && !id) refuse("the seat line needs `Your unit: <unit id>`");
 if (kind === "task" && !id) refuse("the seat line needs `Your task: <task id>`");
-const file = join(inc.hooksDir, `brief-${kind}-${stamp()}.json`);
-writeJson(file, brief);
+// Validate the file the seat line names. Copying it first put a byte-identical second copy of
+// every brief into hooks/ — 452K in one run — that nothing ever read. Only a brief that arrived
+// inline, with no file behind it, needs one written.
+let file = seat.briefFile && existsSync(seat.briefFile) ? seat.briefFile : null;
+if (!file) { file = join(inc.hooksDir, `brief-${kind}-${stamp()}.json`); writeJson(file, brief); }
 const v = run("incident_validator.mjs", ["brief", inc.statePath, file, kind, ...(id ? [id] : [])]);
 if (v.code !== 0) refuse(rejects(v.out).join("; "));
 // The Agent tool runs a seat in the background and the session's turn may end before the seat
