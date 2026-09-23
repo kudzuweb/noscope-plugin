@@ -431,6 +431,32 @@ for (const s of findings) if (L.refusedCall(s)) { console.error("read a finding 
 process.exit(bad ? 1 : 0);
 ' "$P/hooks/lib.mjs" || fail "refusal detector misbehaves"
 
+step "a leader is not woken to be told nothing"
+# A turn prompt whose endings are all plain completions, with no revise, no consult, no picture
+# change and work already running, asks the leader for no decision. That is a whole session turn
+# spent on process, so the brief guard refuses it rather than noting it afterwards. The unit and
+# the task ids come from the live record so the brief is real in every other way.
+DU=$(node -e 'const s=require(process.argv[1]);const t=s.tasks.find(x=>x.unitId&&x.unitId!==s.units[0].id)||s.tasks[0];console.log(t.unitId+" "+t.id)' "$F/incident.json")
+DUNIT=${DU% *}; DTASK=${DU#* }
+cat > "$T/mkbrief.js" <<'JS'
+const fs = require("fs");
+const [unit, task, out, extra] = process.argv.slice(2);
+const b = { unit, periodObjectives: ["keep going"], ask: "carry on",
+            unheard: [{ taskId: task, status: "completed", summary: "done", claims: [] }],
+            ready: [], running: ["placeholder"] };
+if (extra === "picture") b.unheard[0].pictureChanged = true;
+fs.writeFileSync(out, JSON.stringify(b));
+JS
+node "$T/mkbrief.js" "$DUNIT" "$DTASK" "$T/brief-nodecision.json"
+OUTD=$(node "$S/incident_validator.mjs" brief "$F/incident.json" "$T/brief-nodecision.json" turn "$DUNIT" 2>&1; echo "rc=$?")
+case "$OUTD" in *"A model call is a decision"*) ;; *) fail "a brief with nothing to decide was not refused (got: $OUTD)";; esac
+case "$OUTD" in *"rc=0"*) fail "a brief with nothing to decide passed; it must be refused, not noted";; *) ;; esac
+
+# The same brief carrying a picture change has something to decide and must not be refused for it.
+node "$T/mkbrief.js" "$DUNIT" "$DTASK" "$T/brief-decision.json" picture
+OUTE=$(node "$S/incident_validator.mjs" brief "$F/incident.json" "$T/brief-decision.json" turn "$DUNIT" 2>&1)
+case "$OUTE" in *"A model call is a decision"*) fail "a brief carrying a picture change was refused as having nothing to decide";; *) ;; esac
+
 step "a model that can be named is a model that can be priced"
 node -e 'const L=require(process.argv[1]+"/scripts/incident_lib.mjs")' 2>/dev/null
 node --input-type=module -e '

@@ -453,7 +453,7 @@ function checkBrief(b, kind, id) {
     }
     if (b.revise) { for (const k of ["instructions", "why", "report", "periodObjectives"]) if (!(k in b.revise)) reject("Brief complete", `the revise brief lacks "${k}"`); if (/\b(the answer is|the cause is|I think|my hypothesis)\b/i.test(b.revise.instructions ?? "")) warn("Observations flow up", "the revise instructions read like an answer rather than what is missing"); }
     const decision = (b.unheard ?? []).some((e) => e.status !== "completed") || b.revise || (b.unheard ?? []).some((e) => e.consult || e.pictureChanged) || ((b.ready ?? []).length === 0 && (b.running ?? []).length === 0);
-    if (!decision) warn("A model call is a decision", "every unheard ending is a plain completion, no revise is due, no consult was flagged and tasks are ready or running: this turn calls the leader for process");
+    if (!decision) reject("A model call is a decision", "every unheard ending is a plain completion, no revise is due, no consult was flagged and tasks are ready or running: there is nothing for the leader to decide, so this brief is a session turn spent on process");
     noPicture(b, "a leader's turn prompt");
   } else if (kind === "task") {
     const task = taskById.get(id ?? "");
