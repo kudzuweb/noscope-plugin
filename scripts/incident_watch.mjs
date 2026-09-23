@@ -15,15 +15,41 @@
 // reads the run next rather than sent anywhere.
 import { existsSync, readFileSync, readdirSync, appendFileSync } from "node:fs";
 import { join, basename } from "node:path";
-import { loadState, loadRun, OPEN_TASK } from "./incident_lib.mjs";
+import { spawnSync } from "node:child_process";
+import { loadState, loadRun, OPEN_TASK, loadWatching, unwatchRun, workersOf } from "./incident_lib.mjs";
 
 const args = process.argv.slice(2);
 const folder = args[0];
 const flag = (name, fallback) => { const i = args.indexOf(name); return i === -1 ? fallback : args[i + 1]; };
 const has = (name) => args.includes(name);
 
+// --all is the daemon's whole interface: it looks at the runs that registered themselves and
+// nothing else, so a failsafe never has to guess which folders matter. A registration whose
+// record is gone or finished is dropped here, which is why a crashed run leaves nothing behind.
+if (args[0] === "--all") {
+  const registered = Object.keys(loadWatching());
+  const live = [];
+  for (const f of registered) {
+    if (!existsSync(join(f, "incident.json"))) { unwatchRun(f); continue; }
+    let st; try { st = loadState(join(f, "incident.json")); } catch { continue; }
+    if (["satisfied", "failed", "stopped"].includes(st.incident?.status)) { unwatchRun(f); continue; }
+    live.push(f);
+  }
+  const self = new URL(import.meta.url).pathname;
+  let worst = 0;
+  for (const f of live) {
+    const r = spawnSync(process.execPath, [self, f, ...args.slice(1)], { encoding: "utf8" });
+    if (r.stdout) process.stdout.write(r.stdout);
+    if (r.stderr) process.stderr.write(r.stderr);
+    worst = Math.max(worst, r.status ?? 0);
+  }
+  if (live.length === 0) console.log(`no run is registered${registered.length ? ` (${registered.length} stale registration(s) dropped)` : ""}`);
+  process.exit(worst);
+}
+
 if (!folder || !existsSync(join(folder, "incident.json"))) {
   console.error("usage: incident_watch.mjs <run folder> [--minutes N] [--json] [--notify]");
+  console.error("       incident_watch.mjs --all [--minutes N] [--notify]");
   process.exit(2);
 }
 
@@ -124,6 +150,27 @@ if (!ENDED.has(state.incident?.status) && !run.paused) {
     });
   }
 
+  // A seat that registered itself and has never taken a turn. The record cannot show this: a
+  // session that came up and died leaves no turn, no task and no ending, so deriving seats from
+  // the record alone makes the failure most worth catching the one that is invisible. The seat
+  // said it was there, so its silence is measurable from when it said so.
+  for (const w of workersOf(folder)) {
+    if (turns.has(w.sessionId)) continue;                 // it has worked; the checks above own it
+    const idle = minutesSince(w.at);
+    if (idle === null || idle < MINUTES) continue;
+    const unit = w.unit ?? null;
+    const superior = w.role === "ic" ? "the human" : w.role === "leader" ? "the IC" : unit ? `the leader of ${unit}` : "the IC";
+    stalled.push({
+      seat: w.role ?? "seat", unit, sessionId: w.sessionId,
+      idleMinutes: Math.round(idle),
+      lastTurnAt: w.at,
+      superior,
+      waitingOn: "nothing: it joined the incident and has not taken a single turn since",
+      why: lastWord(w.sessionId, null),
+      neverWorked: true,
+    });
+  }
+
   // A running task past the time its own brief allowed it. The bound is in the record, so this
   // needs no threshold of its own and is the one stall that can be called with certainty.
   for (const t of state.tasks ?? []) {
@@ -149,9 +196,11 @@ if (has("--json")) {
   console.log(`nothing is stalled: every seat took a turn inside ${MINUTES} minutes or is waiting on work that is running`);
 } else {
   for (const s of stalled) {
-    const who = s.taskId ? `task ${s.taskId}` : `the ${s.seat} of ${s.unit}`;
-    console.log(`${who} has done nothing for ${s.idleMinutes} minutes and is waiting on nothing`);
-    console.log(`  last acted ${s.lastTurnAt}; ${s.waitingOn}`);
+    const who = s.taskId ? `task ${s.taskId}` : s.unit ? `the ${s.seat} of ${s.unit}` : `the ${s.seat}`;
+    console.log(s.neverWorked
+      ? `${who} joined ${s.idleMinutes} minutes ago and has never taken a turn`
+      : `${who} has done nothing for ${s.idleMinutes} minutes and is waiting on nothing`);
+    console.log(`  ${s.neverWorked ? "joined" : "last acted"} ${s.lastTurnAt}; ${s.waitingOn}`);
     console.log(`  ${s.why.kind}: ${s.why.text}`);
     console.log(`  tell ${s.superior}`);
   }
@@ -161,10 +210,13 @@ if (has("--json")) {
 // does anything at all rather than needing this to reach into its session.
 if (has("--notify") && stalled.length > 0) {
   for (const s of stalled) {
-    const who = s.taskId ? `task ${s.taskId}` : `the ${s.seat} of ${s.unit}`;
+    const who = s.taskId ? `task ${s.taskId}` : s.unit ? `the ${s.seat} of ${s.unit}` : `the ${s.seat}`;
+    const what = s.neverWorked
+      ? `${who} joined ${s.idleMinutes} minutes ago and has never taken a turn`
+      : `${who} has done nothing for ${s.idleMinutes} minutes and is waiting on nothing`;
     appendFileSync(join(hooksDir, "applied.jsonl"), JSON.stringify({
       at: new Date().toISOString(), seat: "watch",
-      result: `${who} has done nothing for ${s.idleMinutes} minutes and is waiting on nothing (${s.why.kind}: ${s.why.text}). Tell ${s.superior}, or take it over.`,
+      result: `${what} (${s.why.kind}: ${s.why.text}). Tell ${s.superior}, or take it over.`,
     }) + "\n");
   }
 }

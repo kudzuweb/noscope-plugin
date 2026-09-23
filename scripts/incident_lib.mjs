@@ -114,6 +114,8 @@ export const NOSCOPE_HOME = join(homedir(), ".claude", "noscope");
 export const CONFIG_PATH = join(NOSCOPE_HOME, "config.json");
 export const CURRENT_PATH = join(NOSCOPE_HOME, "current.json");
 export const CONFIGS_PATH = join(NOSCOPE_HOME, "configs.json");
+export const WATCHING_PATH = join(NOSCOPE_HOME, "watching.json");
+export const WORKERS_PATH = join(NOSCOPE_HOME, "workers.json");
 // `preAccept` is off unless the human turned it on at install: it writes the folder-trust and
 // external-CLAUDE.md flags into ~/.claude.json for a working directory, which is the human's
 // click to give, not the plugin's to assume. Off, a launched tab waits on the dialog.
@@ -176,6 +178,70 @@ export function loadConfig() {
   try { return { ...CONFIG_DEFAULTS, ...JSON.parse(readFileSync(CONFIG_PATH, "utf8")) }; } catch { return { ...CONFIG_DEFAULTS }; }
 }
 /** current.json maps a working directory to the run folder of the incident open in it. */
+/**
+ * The runs the failsafe watches. A run says when it starts and when it ends rather than the
+ * daemon hunting for open records: the daemon is a failsafe, so it must not depend on guessing
+ * which folders matter. An entry left behind by a crash costs nothing, because the watcher drops
+ * one whose record is gone or finished.
+ */
+/**
+ * The seats the failsafe watches, beside the runs. A run registering itself says where to look;
+ * a worker registering itself says who should be there, which is the thing the record cannot say.
+ * A session that came up and never took a turn leaves no trace in the record at all, so without
+ * this the one failure most worth catching — a tab that opened and died — is the one invisible to
+ * the watcher. Kept beside the session markers rather than inside them, because the gate reads a
+ * marker on every hook of every seat and that path is measured in milliseconds.
+ */
+export function loadWorkers() {
+  try { return JSON.parse(readFileSync(WORKERS_PATH, "utf8")); } catch { return {}; }
+}
+export function saveWorkers(map) {
+  mkdirSync(NOSCOPE_HOME, { recursive: true });
+  writeFileSync(WORKERS_PATH, JSON.stringify(map, null, 2) + "\n");
+}
+export function registerWorker(id, folder) {
+  if (!id) return null;
+  const map = loadWorkers();
+  map[id] = {
+    folder,
+    role: process.env.NOSCOPE_ROLE ?? null,
+    unit: process.env.NOSCOPE_UNIT ?? process.env.NOSCOPE_TASK ?? null,
+    at: new Date().toISOString(),
+  };
+  saveWorkers(map);
+  return id;
+}
+export function deregisterWorker(id) {
+  if (!id) return false;
+  const map = loadWorkers();
+  if (!(id in map)) return false;
+  delete map[id]; saveWorkers(map);
+  return true;
+}
+export function workersOf(folder) {
+  return Object.entries(loadWorkers())
+    .filter(([, w]) => w.folder === folder)
+    .map(([sessionId, w]) => ({ sessionId, ...w }));
+}
+export function loadWatching() {
+  try { return JSON.parse(readFileSync(WATCHING_PATH, "utf8")); } catch { return {}; }
+}
+export function saveWatching(map) {
+  mkdirSync(NOSCOPE_HOME, { recursive: true });
+  writeFileSync(WATCHING_PATH, JSON.stringify(map, null, 2) + "\n");
+}
+export function watchRun(folder, objective) {
+  const map = loadWatching();
+  map[folder] = { at: new Date().toISOString(), objective: objective ?? null };
+  saveWatching(map);
+  return Object.keys(map).length;
+}
+export function unwatchRun(folder) {
+  const map = loadWatching();
+  if (!(folder in map)) return false;
+  delete map[folder]; saveWatching(map);
+  return true;
+}
 export function loadCurrent() {
   try { return JSON.parse(readFileSync(CURRENT_PATH, "utf8")); } catch { return {}; }
 }
@@ -313,6 +379,7 @@ export function joinSession(folder, id = sessionId()) {
   mkdirSync(SESSIONS_DIR, { recursive: true });
   pruneSessions();
   writeFileSync(sessionMarkerPath(id), `${folder}\n`);
+  registerWorker(id, folder);
   return id;
 }
 /**
@@ -335,6 +402,7 @@ export function pruneSessions() {
 export function leaveSession(id = sessionId()) {
   if (!id) return null;
   try { rmSync(sessionMarkerPath(id)); } catch {}
+  deregisterWorker(id);
   return id;
 }
 /** Drops every marker naming this run folder; the end of an incident stands its seats down. */
@@ -343,7 +411,7 @@ export function clearSessions(folder) {
   try {
     for (const name of readdirSync(SESSIONS_DIR)) {
       const p = join(SESSIONS_DIR, name);
-      try { if (readFileSync(p, "utf8").trim() === folder) { rmSync(p); n++; } } catch {}
+      try { if (readFileSync(p, "utf8").trim() === folder) { rmSync(p); deregisterWorker(name); n++; } } catch {}
     }
   } catch {}
   return n;

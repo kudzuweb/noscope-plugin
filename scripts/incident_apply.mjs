@@ -25,7 +25,7 @@
 //
 // Prints what changed, one line each. Ids are <incident>- uNN units, tNN tasks, cNN claims,
 // rNN reassignments, oNN open items, qNN questions, pNN reports, gNN resource gaps.
-import { loadState, saveState, appendLog, nextId, OPEN_TASK, isDeterministic, rootUnit, refreshReady, cascadeCancel, measureOf, priceOf, loadRun, saveRun, loadSavedConfigs, saveSavedConfigs, resolveModel, runConfig, clearSessions } from "./incident_lib.mjs";
+import { loadState, saveState, appendLog, nextId, OPEN_TASK, isDeterministic, rootUnit, refreshReady, cascadeCancel, measureOf, priceOf, loadRun, saveRun, loadSavedConfigs, saveSavedConfigs, resolveModel, runConfig, clearSessions, unwatchRun } from "./incident_lib.mjs";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -516,6 +516,8 @@ appendLog(statePath, events);
 if (["satisfied", "failed", "stopped"].includes(state.incident.status)) {
   const n = clearSessions(dirname(statePath));
   if (n) say(`${n} session(s) stood down; their noscope hooks no longer fire`);
+  // The failsafe daemon is told the run is over, so it stops looking at a finished record.
+  if (unwatchRun(dirname(statePath))) say("the failsafe daemon is no longer watching this run");
   // Trust was lent for the length of the incident, so it goes back the moment the incident
   // ends. A repository an incident visited is left as it was found.
   try {

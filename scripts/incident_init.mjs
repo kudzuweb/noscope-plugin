@@ -20,7 +20,7 @@ import { mkdirSync, writeFileSync, readdirSync, existsSync, readFileSync } from 
 import { join, resolve, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
-import { appendLog, loadConfig, cutoffBefore, saveRun, loadCurrent, saveCurrent, loadSavedConfigs, resolveModel, joinSession } from "./incident_lib.mjs";
+import { appendLog, loadConfig, cutoffBefore, saveRun, loadCurrent, saveCurrent, watchRun, loadSavedConfigs, resolveModel, joinSession } from "./incident_lib.mjs";
 
 const args = process.argv.slice(2);
 const wd = args[0] && !args[0].startsWith("--") ? resolve(args[0]) : null;
@@ -87,6 +87,8 @@ const run = {
 saveRun(statePath, run);
 appendLog(statePath, [{ type: "incident.opened", actor: "ic", objective: opt.objective, constraints: opt.constraints, priorities: opt.priorities, workingDirectory: wd, run }]);
 const current = loadCurrent(); current[wd] = folder; saveCurrent(current);
+// The failsafe daemon watches the runs that told it they exist.
+watchRun(folder, opt.objective);
 // The session that opened the incident is its first seat, so its hooks run from here on. Where
 // the session id is not in the environment nothing is marked and the gate would let this
 // session past every hook, so say so rather than letting the run go quiet.
