@@ -60,9 +60,13 @@ it opens, a seat when it joins — and reports any that has taken no turn for to
 waiting on nothing, with how long and why, quoted from the error that stopped it or the last thing
 it said. A seat waiting on work that is running is not stalled however long it waits. Each one is
 queued for the seat above it, so the Incident Commander is told the next time it does anything.
+Nothing has to be set up for this: starting it writes the agent and loads it in one step, and the
+last run to end deletes it again, so between incidents there is no agent on the machine at all.
+A start that fails is tried three times a second apart, because launchd refuses to load a label
+it is still tearing down and that clears on its own — and if all three fail the run says so and
+carries on, since a failsafe that cannot start is not a reason to refuse an incident.
 `node ${CLAUDE_PLUGIN_ROOT}/scripts/incident_daemon.mjs status` says whether it is up and what it
-last found. On anything but a Mac it prints the command to put on a timer of your own, and the run
-goes on either way: a failsafe that cannot start is not a reason to refuse an incident.
+last found. On anything but a Mac it prints the command to put on a timer of your own.
 
 ## Run an incident
 

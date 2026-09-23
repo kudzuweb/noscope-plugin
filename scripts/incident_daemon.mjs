@@ -5,6 +5,9 @@
 // abandoned mid-turn, and the machine rebooting.
 //
 //   node incident_daemon.mjs ensure [--minutes N]    load it if it is not already (what a run calls)
+//
+// Nothing needs installing in advance: ensure writes the shim, writes the plist and loads the
+// agent, and stop-if-idle removes all three. Between incidents there is no agent on the machine.
 //   node incident_daemon.mjs stop-if-idle            unload it, but only when no run is registered
 //   node incident_daemon.mjs install [--minutes N]   load it whether or not it is already loaded
 //   node incident_daemon.mjs status                  whether it is loaded, and what it last found
@@ -48,6 +51,8 @@ const mode = args[0];
 const flag = (n, d) => { const i = args.indexOf(n); return i === -1 ? d : args[i + 1]; };
 const uid = process.getuid?.() ?? 501;
 const launchctl = (...a) => spawnSync("launchctl", a, { encoding: "utf8" });
+// A blocking pause with no child process and no timer, so a retry costs one second and nothing else.
+const sleep = (ms) => { try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); } catch {} };
 
 if (!["install", "status", "uninstall", "ensure", "stop-if-idle"].includes(mode)) {
   console.error("usage: incident_daemon.mjs ensure [--minutes N] | stop-if-idle | install [--minutes N] | status | uninstall");
@@ -169,10 +174,22 @@ exec ${JSON.stringify(process.execPath)} "$newest" --all --notify
 writeFileSync(SHIM, shim, { mode: 0o755 });
 writeFileSync(PLIST, plist);
 
-launchctl("bootout", `gui/${uid}/${LABEL}`);          // replace any earlier copy; failure is fine
-const boot = launchctl("bootstrap", `gui/${uid}`, PLIST);
+// Three attempts, a second apart. launchd refuses a bootstrap while it is still tearing the same
+// label down, which is exactly what happens when one incident ends as another begins, and that
+// refusal clears on its own in well under a second. Giving up on the first one would leave the
+// failsafe off for the length of a run over a race that fixes itself.
+let boot = null;
+for (let attempt = 1; attempt <= 3; attempt++) {
+  if (attempt > 1) sleep(1000);
+  launchctl("bootout", `gui/${uid}/${LABEL}`);        // replace any earlier copy; failure is fine
+  boot = launchctl("bootstrap", `gui/${uid}`, PLIST);
+  if (boot.status === 0) {
+    if (attempt > 1) console.error(`(loaded on attempt ${attempt})`);
+    break;
+  }
+}
 if (boot.status !== 0) {
-  console.error(`wrote ${PLIST} but launchctl bootstrap failed: ${(boot.stderr || "").trim()}`);
+  console.error(`wrote ${PLIST} but launchctl bootstrap failed three times: ${(boot.stderr || "").trim()}`);
   console.error(`load it by hand with:\n  launchctl bootstrap gui/${uid} ${PLIST}`);
   process.exit(1);
 }
