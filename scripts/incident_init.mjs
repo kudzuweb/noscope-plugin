@@ -87,8 +87,18 @@ const run = {
 saveRun(statePath, run);
 appendLog(statePath, [{ type: "incident.opened", actor: "ic", objective: opt.objective, constraints: opt.constraints, priorities: opt.priorities, workingDirectory: wd, run }]);
 const current = loadCurrent(); current[wd] = folder; saveCurrent(current);
-// The failsafe daemon watches the runs that told it they exist.
+// The failsafe daemon watches the runs that told it they exist, and runs only while there is
+// something to watch: this run starts it if no other one already has. A failsafe that cannot be
+// started is not a reason to refuse an incident, so this never stops the run.
 watchRun(folder, opt.objective);
+// On stderr, never stdout: this script prints the run folder and nothing else, because every
+// caller reads it as `F=$(node incident_init.mjs ...)`.
+try {
+  const out = execFileSync("node", [join(dirname(fileURLToPath(import.meta.url)), "incident_daemon.mjs"), "ensure"], { encoding: "utf8" }).trim();
+  if (out) console.error(out.split("\n")[0]);
+} catch (e) {
+  console.error(`WARN the failsafe watcher could not be started (${String(e.message ?? e).split("\n")[0]}); the run is unaffected`);
+}
 // The session that opened the incident is its first seat, so its hooks run from here on. Where
 // the session id is not in the environment nothing is marked and the gate would let this
 // session past every hook, so say so rather than letting the run go quiet.

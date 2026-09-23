@@ -516,8 +516,14 @@ appendLog(statePath, events);
 if (["satisfied", "failed", "stopped"].includes(state.incident.status)) {
   const n = clearSessions(dirname(statePath));
   if (n) say(`${n} session(s) stood down; their noscope hooks no longer fire`);
-  // The failsafe daemon is told the run is over, so it stops looking at a finished record.
+  // The failsafe daemon is told the run is over, so it stops looking at a finished record, and
+  // then stops altogether if this was the last run there was. The last and not any: another
+  // incident still open must not be left unwatched because this one finished.
   if (unwatchRun(dirname(statePath))) say("the failsafe daemon is no longer watching this run");
+  try {
+    const out = execFileSync("node", [join(dirname(fileURLToPath(import.meta.url)), "incident_daemon.mjs"), "stop-if-idle"], { encoding: "utf8" }).trim();
+    if (out) say(out.split("\n")[0]);
+  } catch {}
   // Trust was lent for the length of the incident, so it goes back the moment the incident
   // ends. A repository an incident visited is left as it was found.
   try {

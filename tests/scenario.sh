@@ -13,6 +13,9 @@ CWD=$T/repo
 # the test a seat of a scratch run. Everything below inherits it through the environment.
 export NOSCOPE_SESSION_ID="scenario-$$"
 SESSIONS="$HOME/.claude/noscope/sessions"
+# The tests must not load a launchd agent on the machine running them, and must not leave one
+# loaded if a step between opening and ending the run fails.
+export NOSCOPE_NO_DAEMON=1
 # A run that stops at a failing step must not leave its marker on the machine: the directory
 # would never be empty again, and the gate's cheap tier is the one that needs it empty.
 trap 'rm -f "$SESSIONS/$NOSCOPE_SESSION_ID"' EXIT
@@ -491,6 +494,30 @@ case "$OUTQ" in *"rc=0"*) ;; *) fail "a seat inside the threshold was reported a
 node "$S/incident_watch.mjs" "$F" --minutes 30 --notify >/dev/null 2>&1
 grep -q '"seat":"watch"' "$F/hooks/applied.jsonl" || fail "a stall was not queued for the superior"
 rm -f "$F/hooks/turns-watch-leader.json"
+
+step "the failsafe runs while a run is open and stops with the last one, not the first"
+# The decision is the registry's and needs no launchctl, so it is checked here; loading the agent
+# itself is not, because a test must not install anything on the machine running it.
+grep -q "NOSCOPE_NO_DAEMON" "$S/incident_daemon.mjs" || fail "the daemon has no way to stay out of a test run"
+OUTG=$(NOSCOPE_NO_DAEMON=1 node "$S/incident_daemon.mjs" ensure 2>&1; echo "rc=$?")
+case "$OUTG" in *"rc=0"*) ;; *) fail "ensure did not stand down under NOSCOPE_NO_DAEMON (got: $OUTG)";; esac
+case "$OUTG" in *"did nothing"*) ;; *) fail "ensure under NOSCOPE_NO_DAEMON did not say it stood down";; esac
+# With a run registered, stopping is refused before launchctl is ever reached.
+cat > "$T/regrun.js" <<'JS'
+const fs = require("fs"), os = require("os"), path = require("path");
+const p = path.join(os.homedir(), ".claude", "noscope", "watching.json");
+let m = {}; try { m = JSON.parse(fs.readFileSync(p, "utf8")); } catch {}
+if (process.argv[3] === "add") m[process.argv[2]] = { at: new Date().toISOString(), objective: "scenario" };
+else delete m[process.argv[2]];
+fs.mkdirSync(path.dirname(p), { recursive: true });
+fs.writeFileSync(p, JSON.stringify(m, null, 2) + "\n");
+JS
+node "$T/regrun.js" "$F" add
+# Unguarded on purpose: with a run registered this returns before it reaches launchctl, so it is
+# the one branch that can be exercised for real without installing anything.
+OUTS=$(env -u NOSCOPE_NO_DAEMON node "$S/incident_daemon.mjs" stop-if-idle 2>&1)
+case "$OUTS" in *"stays up"*) ;; *) fail "the failsafe stopped while a run was still registered (got: $OUTS)";; esac
+node "$T/regrun.js" "$F" remove
 
 step "a model that can be named is a model that can be priced"
 node -e 'const L=require(process.argv[1]+"/scripts/incident_lib.mjs")' 2>/dev/null
